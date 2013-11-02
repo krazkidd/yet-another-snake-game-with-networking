@@ -1,3 +1,5 @@
+from collections import deque
+
 class Dir:
 	"""An enum of the cardinal directions."""
 	Up, Down, Left, Right = range(4)
@@ -7,15 +9,22 @@ class Snake:
 	"""TODO"""
 
 	# the snake's body length which grows after
-	# eating pellets
-	length = 4
+	# eating a pellet
+	#length = 4
 
 	# the heading of the snake
-	heading = Dir.Right
+	#heading = Dir.Right
 
 	# the (X,Y) position of the snake's head
-	headX = 15
-	headY = 15
+	#headX = 15
+	#headY = 15
+
+	def __init__(self, headX = 15, headY = 15, heading = Dir.Right, length = 4):
+		self.headX = headX
+		self.headY = headY
+		self.heading = heading
+		self.length = length
+#TODO make deque for body
 
 #NOT USED
 #	def turnLeft(self):
@@ -30,9 +39,9 @@ class Snake:
 		# head's position accordingly
 		if self.heading == Dir.Right:
 			self.headX += 1
-		if self.heading == Dir.Left:
+		elif self.heading == Dir.Left:
 			self.headX -= 1
-		if self.heading == Dir.Up:
+		elif self.heading == Dir.Up:
 			self.headY -= 1
-		if self.heading == Dir.Down:
+		else: # self.heading == Dir.Down
 			self.headY += 1
