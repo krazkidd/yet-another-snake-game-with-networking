@@ -8,6 +8,8 @@ from Snake import *
 stdscr = curses.initscr() # get window object for whole screen
 curses.noecho() # turn off character echo
 curses.cbreak() # get input after every keypress
+curses.start_color() # for color support
+curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK) # define a color for player's snake
 stdscr.keypad(1) # return special keys as single chars
 stdscr.nodelay(True)
 curses.curs_set(0) # make cursor invisible
@@ -25,7 +27,7 @@ while True:
 	stdscr.border()
 
 	# draw snake
-	stdscr.addch(snake.headY, snake.headX, 'O', curses.COLOR_RED)
+	stdscr.addch(snake.headY, snake.headX, 'O', curses.color_pair(1))
 	#stdscr.addch(snake2.headY, snake2.headX, 'O', curses.COLOR_GREEN)
 
 	stdscr.refresh()

@@ -3,7 +3,9 @@ class Dir:
 	Up, Down, Left, Right = range(4)
 
 class Snake:
+
 	"""TODO"""
+
 	# the snake's body length which grows after
 	# eating pellets
 	length = 4
@@ -20,12 +22,12 @@ class Snake:
 #		pass
 	
 	def move(self):
-		"""Move the snake's body.
+		"""Move (update) the snake's body.
 
 		This should be called once for every unit
 		of time that passes."""
 		# check the heading of the snake and move the
-		# head accordingly
+		# head's position accordingly
 		if self.heading == Dir.Right:
 			self.headX += 1
 		if self.heading == Dir.Left:
