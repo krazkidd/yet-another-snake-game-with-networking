@@ -20,6 +20,7 @@ curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK) # define a color for
 stdscr.keypad(1) # return special keys as single chars
 stdscr.nodelay(True)
 curses.curs_set(0) # make cursor invisible
+pellet = Pellet(stdscr.getmaxyx()[1], stdscr.getmaxyx()[0]) 
 
 # main game loop
 while True:
@@ -29,9 +30,15 @@ while True:
 	# draw outside border
 	stdscr.border()
 
+	# draw game data
+	stdscr.addstr(0, 0, "Score: " + str(snake1.length))
+
 	# draw snakes
 	stdscr.addch(snake1.headY, snake1.headX, 'O', curses.color_pair(1))
 	#stdscr.addch(snake2.headY, snake2.headX, 'O', curses.color_pair(2))
+
+	# draw Pellet
+	stdscr.addch(pellet.posy, pellet.posx, '+')
 
 	# actually paint the window
 	stdscr.refresh()
@@ -54,7 +61,12 @@ while True:
 	# move players' snakes
 	snake1.move()
 	#Snake.move(snake1) # an alternative way to call a particular object's method
-	#snake2.move()
+	#snake2.move()	
+	
+	if snake1.headX == pellet.posx and snake1.headY ==  pellet.posy:
+		pellet = Pellet(stdscr.getmaxyx()[1], stdscr.getmaxyx()[0])
+		snake1.length += 1
+		
 
 	# pause the screen for just a bit
 	time.sleep(0.2)

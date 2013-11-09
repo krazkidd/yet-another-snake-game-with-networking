@@ -1,4 +1,5 @@
 from collections import deque
+import random
 
 class Dir:
 	"""An enum of the cardinal directions."""
@@ -45,3 +46,9 @@ class Snake:
 			self.headY -= 1
 		else: # self.heading == Dir.Down
 			self.headY += 1
+
+class Pellet:
+	def __init__(self, stdscr_x, stdscr_y):
+		self.posx = random.randint(0, stdscr_x - 1)
+		self.posy = random.randint(0, stdscr_y - 1)
+		
