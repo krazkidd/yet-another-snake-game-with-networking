@@ -1,65 +1,65 @@
 #!/usr/bin/python2
 
-import curses
-import curses.ascii
 import time
+
+import pygame
+from pygame.locals import *
+import pygcurse
+
 from Snake import *
+
+# these dimension units are in text cells, not pixels
+WIN_WIDTH, WIN_HEIGHT = 80, 35
 
 # instantiate players' snakes
 snake1 = Snake(15, 15, Dir.Right, 4)
 #snake2 = Snake(30, 30, Dir.Right, 4)
 
+pellet = Pellet(WIN_WIDTH - 1, WIN_HEIGHT - 1) 
 
-# initiate curses
-stdscr = curses.initscr() # get window object for whole screen
-curses.noecho() # turn off character echo
-curses.cbreak() # get input after every keypress
-curses.start_color() # for color support
-curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK) # define a color for player1's snake
-curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK) # define a color for player2's snake
-stdscr.keypad(1) # return special keys as single chars
-stdscr.nodelay(True)
-curses.curs_set(0) # make cursor invisible
-pellet = Pellet(stdscr.getmaxyx()[1], stdscr.getmaxyx()[0]) 
+# initiate pygame and pygcurse
+pygame.init()
+win = pygcurse.PygcurseWindow(WIN_WIDTH, WIN_HEIGHT, 'Snake')
+win.autoupdate = False # turn off autoupdate so window doesn't flicker
 
 # main game loop
 while True:
 	# clear the screen
-	stdscr.erase()
+	#win.erase() # this would be used instead but for a bug...
+	win.fill(' ')
 
 	# draw outside border
-	stdscr.border()
+#TODO
 
 	# draw game data
-	stdscr.addstr(0, 0, "Score: " + str(snake1.length))
+	win.putchars("Score: " + str(snake1.length), 0, 0)
 
 	# draw snakes
-	stdscr.addch(snake1.headY, snake1.headX, 'O', curses.color_pair(1))
-	#stdscr.addch(snake2.headY, snake2.headX, 'O', curses.color_pair(2))
+	win.putchars('O', snake1.headX, snake1.headY, fgcolor = 'red', bgcolor = 'black')
 
-	# draw Pellet
-	stdscr.addch(pellet.posy, pellet.posx, '+')
+	# draw pellet
+	win.putchar('+', pellet.posx, pellet.posy, fgcolor = 'yellow', bgcolor = 'black')
 
 	# actually paint the window
-	stdscr.refresh()
+	win.update()
 
 	# pause the screen for just a bit
-	time.sleep(0.2)
-	
-	# get user input, if any
-	input = stdscr.getch() 
+	time.sleep(0.1)
 
-	# change the heading of the snake according to user input
-	if input == curses.KEY_UP or input == ord('w'):
-		snake1.heading = Dir.Up
-	elif input == curses.KEY_DOWN or input == ord('s'):
-		snake1.heading = Dir.Down
-	elif input == curses.KEY_LEFT or input == ord('a'):
-		snake1.heading = Dir.Left
-	elif input == curses.KEY_RIGHT or input == ord('d'):
-		snake1.heading = Dir.Right
-	elif input == curses.ascii.ESC: # quit when Escape is pressed
-		break
+	# process input queue
+#TODO only allow one keypress event per game loop cycle OR fix Snake so it doesn't allow backwards movement
+	for event in pygame.event.get():
+		if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
+			pygame.quit()
+		if event.type == KEYDOWN:
+			if event.key == K_UP:
+				snake1.changeHeading(Dir.Up)
+			elif event.key == K_DOWN:
+				snake1.changeHeading(Dir.Down)
+			elif event.key == K_LEFT:
+				snake1.changeHeading(Dir.Left)
+			elif event.key == K_RIGHT:
+				snake1.changeHeading(Dir.Right)
 
 	# move players' snakes
 	snake1.move()
@@ -68,9 +68,8 @@ while True:
 	
 	# check if player's head is on a pellet. If so, consume it and create a new one
 	if snake1.headX == pellet.posx and snake1.headY ==  pellet.posy:
-		pellet = Pellet(stdscr.getmaxyx()[1], stdscr.getmaxyx()[0])
 		snake1.length += 1
+		pellet = Pellet(WIN_WIDTH - 1, WIN_HEIGHT - 1)
 
-# terminate curses
-curses.nocbreak(); stdscr.keypad(0); curses.echo()
-curses.endwin()
+#TODO check if player has hit the edge and end the game if so
+	#if ...

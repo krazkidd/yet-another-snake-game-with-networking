@@ -41,6 +41,26 @@ class Snake:
 		else: # self.heading == Dir.Down
 			self.headY += 1
 
+#TODO this still allows going backwards if the player quickly presses two arrow keys before move() is called.
+#     this could be fixed by using a flag so that only one direction change can happen per move()
+	def changeHeading(self, newHeading):
+
+		"""Tell the Snake the direction the player wants to move in.
+
+		The Snake cannot go backwards."""
+
+		# don't do anything if the new heading is opposite the current heading
+		if self.heading == Dir.Up and newHeading == Dir.Down:
+			return
+		elif self.heading == Dir.Down and newHeading == Dir.Up:
+			return
+		elif self.heading == Dir.Left and newHeading == Dir.Right:
+			return
+		elif self.heading == Dir.Right and newHeading == Dir.Left:
+			return
+
+		self.heading = newHeading
+
 class Pellet:
 
 	"""This is what the Snake eats.
