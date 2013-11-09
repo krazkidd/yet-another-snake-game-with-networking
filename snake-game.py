@@ -43,6 +43,9 @@ while True:
 	# actually paint the window
 	stdscr.refresh()
 
+	# pause the screen for just a bit
+	time.sleep(0.2)
+	
 	# get user input, if any
 	input = stdscr.getch() 
 
@@ -63,14 +66,11 @@ while True:
 	#Snake.move(snake1) # an alternative way to call a particular object's method
 	#snake2.move()	
 	
+	# check if player's head is on a pellet. If so, consume it and create a new one
 	if snake1.headX == pellet.posx and snake1.headY ==  pellet.posy:
 		pellet = Pellet(stdscr.getmaxyx()[1], stdscr.getmaxyx()[0])
 		snake1.length += 1
-		
 
-	# pause the screen for just a bit
-	time.sleep(0.2)
-	
 # terminate curses
 curses.nocbreak(); stdscr.keypad(0); curses.echo()
 curses.endwin()
