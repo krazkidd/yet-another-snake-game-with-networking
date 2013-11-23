@@ -1,3 +1,5 @@
+import random
+
 class Pellet:
 
 	"""This is what the Snake eats.

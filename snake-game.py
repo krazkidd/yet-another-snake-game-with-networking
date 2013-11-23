@@ -40,7 +40,7 @@ while True:
 
 	# draw snakes
 	win.putchars('O', snake1.headX, snake1.headY, fgcolor = 'red', bgcolor = 'black')
-	win.putchars('O', snake_ai.headX, snake_ai.headY, fgcolor = 'blue', bgcolor = 'black')
+	win.putchars('O', snakeAI.headX, snakeAI.headY, fgcolor = 'blue', bgcolor = 'black')
 
 	# draw pellet
 	win.putchar('+', pellet.posx, pellet.posy, fgcolor = 'yellow', bgcolor = 'black')

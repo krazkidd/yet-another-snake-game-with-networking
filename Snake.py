@@ -97,17 +97,18 @@ class SnakeAI(Snake):
 
 		"""
 
-		# use changeHeading() instead of manipulating self.heading directly
+		# use changeHeading() instead of manipulating heading directly
 		if p.posx > self.headX:
-			changeHeading(Dir.Right)
+			self.changeHeading(Dir.Right)
 		elif p.posx < self.headX:
-			changeHeading(Dir.Left)
+			self.changeHeading(Dir.Left)
 		if p.posy < self.headY:
-			changeHeading(Dir.Up)
+			self.changeHeading(Dir.Up)
 		elif p.posy > self.headY:
-			changeHeading(Dir.Down)
+			self.changeHeading(Dir.Down)
 
 		# Look! We call the parent class's move() method to do the actual
-		# position update.
+		# position update. We must use Snake.move(self, ...) instead of
+		# self.move(...) to do this.
 		Snake.move(self, p);
 
