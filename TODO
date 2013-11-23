@@ -1,0 +1,11 @@
+* in Snake.changeHeading():
+  - still allows going backwards if the player quickly presses two arrow keys before move() is called. this could be fixed by using a flag so that only one direction change can happen per move()
+
+* in Snake.move()?:
+  - after adding body, check we haven't bitten ourself
+
+* in Snake:
+  - make deque for body
+
+* in snake-game:
+  - only allow one keypress event per game loop cycle OR fix Snake so it doesn't allow backwards movement
