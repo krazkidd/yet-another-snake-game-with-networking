@@ -2,126 +2,166 @@ from collections import deque
 import random
 
 class Dir:
-	"""An enum of the cardinal directions."""
-	Up, Down, Left, Right = range(4)
+        """An enum of the cardinal directions."""
+        Up, Down, Left, Right = range(4)
 
 class Pellet:
 
-	"""This is what the Snake eats.
+        """This is what the Snake eats.
 
-	For now, this just holds a position. Other attributes could
-	be added in the future like power-up abilities."""
+        For now, this just holds a position. Other attributes could
+        be added in the future like power-up abilities."""
 
-	def __init__(self, stdscr_x, stdscr_y):
-		
-		"""On creation, randomly set a position using the
-		given arguments as maximum values."""
+        def __init__(self, stdscr_x, stdscr_y, fgcolor = 'red', bgcolor = 'black'):
+                
+                """On creation, randomly set a position using the
+                given arguments as maximum values."""
 
-		self.posx = random.randint(0, stdscr_x - 1) # subtract 1 because cursor position is zero-based
-		self.posy = random.randint(0, stdscr_y - 1)
+                self.posx = random.randint(0, stdscr_x - 1) # subtract 1 because cursor position is zero-based
+                self.posy = random.randint(0, stdscr_y - 1)
+                #Color
+                self.fgcolor = fgcolor
+                self.bgcolor = bgcolor
 
 class Snake:
 
-	"""This is the human player's avatar in the game.
+        """This is the human player's avatar in the game.
 
-	For every tick of the game world, the Snake moves. And for every
-	pellet it eats, its length grows.
+        For every tick of the game world, the Snake moves. And for every
+        pellet it eats, its length grows.
 
-	"""
+        """
 
-	def __init__(self, headX = 15, headY = 15, heading = Dir.Right, length = 4):
-		# the (X,Y) position of the snake's head
-		self.headX = headX
-		self.headY = headY
-		# the heading of the snake
-		self.heading = heading
-		# the snake's body length which grows after
-		# eating a pellet
-		self.length = length
+        def __init__(self, headX = 15, headY = 15, heading = Dir.Right, length = 4, fgcolor = 'red', bgcolor = 'black'):
+                # the (X,Y) position of the snake's head
+                self.headX = headX
+                self.headY = headY
+                # the heading of the snake
+                self.heading = heading
+                # the snake's body length which grows after
+                # eating a pellet
+                self.length = length
+                #Color
+                self.fgcolor = fgcolor
+                self.gbcolor = bgcolor
+                # store body segments as tuples (x, y)
+                self.body = deque([(headX - 3, headY), (headX - 2, headY), (headX - 1, headY),(headX, headY)])
+                #self.body = deque([(headX, headY), (headX - 1, headY), (headX - 2, headY),(headX - 3, headY)])
+                self.shouldGrow = False
+                
+        def grow(self):
 
-	def move(self, p):
+                """Grow the Snake one segment longer.
 
-		"""Move (update) the snake's body.
+                This is called whenever a snake eats a pellet.
+                """
 
-		This should be called once for every unit
-		of time that passes.
+                # this just sets a flag so that on the next move(),
+                # the last body segment won't be popped off
+                self.shouldGrow = True
+                
+        def move(self, p):
 
-		Arguments:
-		p -- a Pellet object
+                """Move (update) the snake's body.
 
-		"""
+                This should be called once for every unit
+                of time that passes.
+                Arguments:
+                p -- a Pellet object
 
-		# check the heading of the snake and move the
-		# head's position accordingly
-		if self.heading == Dir.Right:
-			self.headX += 1
-		elif self.heading == Dir.Left:
-			self.headX -= 1
-		elif self.heading == Dir.Up:
-			self.headY -= 1
-		else: # self.heading == Dir.Down
-			self.headY += 1
+                """
 
-	def changeHeading(self, newHeading):
+                # check the heading of the snake and move the
+                # head's position accordingly
+                if self.heading == Dir.Right:
+                        self.headX += 1
+                elif self.heading == Dir.Left:
+                        self.headX -= 1
+                elif self.heading == Dir.Up:
+                        self.headY -= 1
+                else: # self.heading == Dir.Down
+                        self.headY += 1
 
-		"""Tell the Snake the new direction to move in.
+                self.body.append((self.headX, self.headY))
 
-		The Snake cannot go backwards, so the only real change that
-		can happen is to turn left or right.
+                # pop the last body segment unless the snake is supposed to grow
+                if self.shouldGrow == True:
+                        self.shouldGrow = False
+                else:
+                        self.body.popleft()
 
-		"""
+        def changeHeading(self, newHeading):
 
-		# don't do anything if the new heading is opposite the current heading
-		if self.heading == Dir.Up and newHeading == Dir.Down:
-			return
-		elif self.heading == Dir.Down and newHeading == Dir.Up:
-			return
-		elif self.heading == Dir.Left and newHeading == Dir.Right:
-			return
-		elif self.heading == Dir.Right and newHeading == Dir.Left:
-			return
+                """Tell the Snake the new direction to move in.
 
-		self.heading = newHeading
+                The Snake cannot go backwards, so the only real change that
+                can happen is to turn left or right.
+
+                """
+
+                # don't do anything if the new heading is opposite the current heading
+                if self.heading == Dir.Up and newHeading == Dir.Down:
+                        return
+                elif self.heading == Dir.Down and newHeading == Dir.Up:
+                        return
+                elif self.heading == Dir.Left and newHeading == Dir.Right:
+                        return
+                elif self.heading == Dir.Right and newHeading == Dir.Left:
+                        return
+
+                self.heading = newHeading
 
 class SnakeAI(Snake):
 
-	"""This is the computer's avatar in the game.
+        """This is the computer's avatar in the game.
 
-	It currently has a very rudimentary AI.
+        It currently has a very rudimentary AI.
 
-	"""
+        """
 
-	def __init__(self, headX = 15, headY = 15, heading = Dir.Right, length = 4):
-		# the (X,Y) position of the snake's head
-		self.headX = headX
-		self.headY = headY
-		# the heading of the snake
-		self.heading = heading
-		# the snake's body length which grows after
-		# eating a pellet
-		self.length = length
+        def __init__(self, headX = 30, headY = 30, heading = Dir.Right, length = 4, fgcolor = 'blue', bgcolor = 'black' ):
+                # the (X,Y) position of the snake's head
+                self.headX = headX
+                self.headY = headY
+                # the heading of the snake
+                self.heading = heading
+                # the snake's body length which grows after
+                # eating a pellet
+                self.length = length
+                #Color  
+                self.fgcolor = fgcolor
+                self.bgcolor = bgcolor
+                # set up body (NOTE: we are assuming here the snake's heading is to the right)
+                #self.body = deque([(headX, headY), (headX - 1, headY), (headX - 2, headY),(headX - 3, headY)])
+                self.body = deque([(headX - 3, headY), (headX - 2, headY), (headX - 1, headY),(headX, headY)])
+                self.shouldGrow = False
 
-	def move(self, p):
+        def move(self, p):
 
-		"""Move (update) the snake's body.
+                """Move (update) the snake's body.
 
-		This should be called once for every unit
-		of time that passes.
+                This should be called once for every unit
+                of time that passes.
 
-		"""
+                """
 
-		# use changeHeading() instead of manipulating heading directly
-		if p.posx > self.headX:
-			self.changeHeading(Dir.Right)
-		elif p.posx < self.headX:
-			self.changeHeading(Dir.Left)
-		if p.posy < self.headY:
-			self.changeHeading(Dir.Up)
-		elif p.posy > self.headY:
-			self.changeHeading(Dir.Down)
+                # This AI isn't very smart. It just compares it's head position to the pellet's
+                # position and decides which direction it should be going. 
+                # NOTE: There is a bug here. If a new pellet appears on the opposite side of the
+                # SnakeAI's heading, it will only want to go directly backwards, which it's not
+                # allowed to do.
+                if p.posx > self.headX:
+                        # use changeHeading() instead of manipulating heading directly
+                        self.changeHeading(Dir.Right)
+                elif p.posx < self.headX:
+                        self.changeHeading(Dir.Left)
+                if p.posy < self.headY:
+                        self.changeHeading(Dir.Up)
+                elif p.posy > self.headY:
+                        self.changeHeading(Dir.Down)
 
-		# Look! We call the parent class's move() method to do the actual
-		# position update. We must use Snake.move(self, ...) instead of
-		# self.move(...) to do this.
-		Snake.move(self, p);
+                # Look! We call the parent class's move() method to do the actual
+                # position update. We must use Snake.move(self, ...) instead of
+                # self.move(...) to do this.
+                Snake.move(self, p)
 
