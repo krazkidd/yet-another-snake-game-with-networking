@@ -19,9 +19,9 @@ class Pellet:
 
                 self.posx = random.randint(0, stdscr_x - 1) # subtract 1 because cursor position is zero-based
                 self.posy = random.randint(0, stdscr_y - 1)
-                #Color
-                self.fgcolor = fgcolor
-                self.bgcolor = bgcolor
+		#Color
+		self.fgcolor = fgcolor
+		self.bgcolor = bgcolor
 
 class Snake:
 
