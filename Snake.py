@@ -111,6 +111,13 @@ class Snake:
 
                 self.heading = newHeading
 
+        def isColl(self, headPos):
+                #if pos in self.body and self.body.index(pos) is not 0:
+                if headPos in self.body and not headPos == self.body[-1]:
+                        print 'headPos: ' + str(headPos) + ', body[0]: ' +  str(self.body[0])
+                        return True
+                        
+
 class SnakeAI(Snake):
 
         """This is the computer's avatar in the game.
