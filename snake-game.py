@@ -86,11 +86,17 @@ while True:
                 pellet = Pellet(WIN_WIDTH - 1, WIN_HEIGHT - 1, 'yellow')
                 snakeAI.grow()
 
-        if snake1.isColl((snake1.headX, snake1.headY)):
-                print 'works snake'     
-        if snakeAI.isColl((snake1.headX, snake1.headY)):
-                print 'works AI'
+        # check if any snakes are colliding with any other snakes
+        #if snake1.isColl((snake1.headX, snake1.headY)): # previous use of Snake.isColl()
+        if snake1.isColl(snake1):
+                print 'snake1 bit itself'     
+	elif snake1.isColl(snakeAI):
+                print 'snake1 ran into the other snake'     
 
+        if snakeAI.isColl(snakeAI):
+                print 'snakeAI bit itself'
+	elif snakeAI.isColl(snake1):
+                print 'snakeAI ran into the other snake'     
 
-#TODO check if player has hit the edge, their own body, or computer's body and end the game if so
+#TODO check if any snakes have hit the edge
         #if ...

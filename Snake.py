@@ -111,12 +111,30 @@ class Snake:
 
                 self.heading = newHeading
 
-        def isColl(self, headPos):
-                #if pos in self.body and self.body.index(pos) is not 0:
-                if headPos in self.body and not headPos == self.body[-1]:
-                        print 'headPos: ' + str(headPos) + ', body[0]: ' +  str(self.body[0])
-                        return True
-                        
+        def isColl(self, otherSnake):
+
+                """Check if this Snake is colliding with another (or itself).
+
+                In the snake game, we need to check if a snake's head is in
+                the same position of any of its other body segments or any of
+                the body segments of another snake.
+
+                The parameter otherSnake can be a reference to self in order to
+                perform collision detection on self.
+
+                This method can only check for collisions with Snake objects, 
+                not walls or other obstacles."""
+
+                # when doing collision detection on self, we must ignore the
+                # head position already in the body deque
+                if self == otherSnake:
+                        if self.body.count(self.body[-1]) > 1: # body[-1] gets the head pos.
+                                return True
+                else:
+                        if otherSnake.body.count(self.body[-1]) > 0:
+                                return True
+
+                return False
 
 class SnakeAI(Snake):
 
