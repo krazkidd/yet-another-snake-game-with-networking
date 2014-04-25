@@ -9,3 +9,6 @@
 
 * in snake-game:
   - only allow one keypress event per game loop cycle OR fix Snake so it doesn't allow backwards movement
+
+* in MOTD file, add escape codes so we can access things like the user's name? (i.e. "Hello %user!")
+  We may have to decide if the user sees a MOTD before or after log-in

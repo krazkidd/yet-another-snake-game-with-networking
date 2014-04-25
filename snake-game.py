@@ -18,8 +18,12 @@ HOST = '' # any network interface
 PORT = 11845
 
 MAX_MSG_SIZE = 1024
+MAX_MOTD_SIZE = 1024
 
 STRUCT_FMT_LOBBY = '!H'
+
+#FIXME make database of player names/passwords
+PLAYER_NAME = 'Guest'
 
 def main():
     # get program name and fork to server or client mode
@@ -63,6 +67,12 @@ def doLobbyServerStuff(clientsocket, clientNo):
     #FIXME test that we can open the port first! (main server must not be in charge of connectNum--but we have to use a mutex if we increment it here in lobby server)
     print 'Client connected. Sending to game lobby ' + str(clientNo) + '.'
 
+    # send MOTD
+    #FIXME send MOTD before lobby num? i should add a field to demux messages rather than expect them in an exact sequence
+    f = open('MOTD')
+    #FIXME catch any errors from file access here
+    clientsocket.send(f.read(MAX_MOTD_SIZE))
+
     # before moving to UDP socket, tell client lobby port
     clientsocket.send(pack(STRUCT_FMT_LOBBY, PORT + clientNo))
 
@@ -83,7 +93,7 @@ def doLobbyServerStuff(clientsocket, clientNo):
         #TODO process whole network queue
         data, addr = s.recvfrom(MAX_MSG_SIZE)
 
-        # need to verify sender address? session could easily be clobbered if not
+        #TODO need to verify sender address? session could easily be clobbered if not
         print data
 
     print 'Lobby server ' + str(clientNo) + ' is closing.'
@@ -92,6 +102,11 @@ def doClientStuff():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((HOST, PORT))
     print 'Connected to server.'
+    #TODO print server hostname and address. anything else?
+
+    # get MOTD
+    print 'Message of the Day from server:'
+    print s.recv(MAX_MOTD_SIZE)
 
     # get lobby info
     lobbyPort = unpack(STRUCT_FMT_LOBBY, s.recv(calcsize(STRUCT_FMT_LOBBY)))[0]
@@ -111,6 +126,8 @@ def doClientStuff():
     # main game loop
     #FIXME client should go back to lobby after game is over
     while True:
+        #FIXME does game know about networking? how much input does it pass on to server?
+        #      
         game.processInput()
 
         game.tick()
