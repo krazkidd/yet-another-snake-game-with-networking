@@ -5,6 +5,7 @@
 import time
 import sys
 import os 
+from os.path import basename
 import socket
 
 import pygame
@@ -19,10 +20,9 @@ PORT = 11845
 
 def main():
     # get program name and fork to server or client mode
-    #FIXME this only works when you explicitly run python interpreter and not the script file (because of './' before prog name?)
-    if 'snakes' == sys.argv[0]:
+    if 'snakes' == basename(sys.argv[0]):
         doMainServerStuff()
-    if 'snake' == sys.argv[0]:
+    if 'snake' == basename(sys.argv[0]):
         doClientStuff()
 
 def doMainServerStuff():
