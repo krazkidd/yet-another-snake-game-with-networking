@@ -9,6 +9,7 @@ from os.path import basename
 import socket
 from struct import pack
 from struct import unpack
+from struct import calcsize
 
 import pygame
 from pygame.locals import *
@@ -44,29 +45,37 @@ def doMainServerStuff():
         (clientsocket, address) = s.accept()
         pid = os.fork()
         if (0 == pid):
-            #FIXME test that we can open the port first! (main server must not be in charge of connectNum--but we have to use a mutex if we increment it here in lobby server)
-            print 'Client connected. Sending to game lobby ' + str(connectNum) + '.'
+            # s.shutdown(socket.SHUT_RDWR) # NOTE: We don't call shutdown because that really ends the TCP connection.
+            s.close()                      #       Instead, we just want to close the file descriptor
 
-            # before moving to new socket, tell client lobby port
-            clientsocket.send(pack(STRUCT_FMT_LOBBY, PORT + connectNum))
-            #clientsocket.shutdown(socket.SHUT_RDWR)
-            clientsocket.close()
-            s.close()
+            doLobbyServerStuff(clientsocket, connectNum)
 
-            # NOTE: we have to open a new listening socket so client sees an open connection
-            # bind socket to UDP port
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.bind((HOST, PORT + connectNum))
+            #FIXME do any cleanup after a lobby closes?
 
-            doLobbyServerStuff(s, connectNum)
-            print 'Lobby server ' + str(connectNum) + ' is closing.'
-            break #FIXME find cleaner way for lobby servers to break loop?
+            # lobby process will die after this
+            break
         else:
+            # clientsocket.shutdown(socket.SHUT_RDWR) # we must not call shutdown() because TCP
+            clientsocket.close()
             #FIXME save child ID so we can talk to it?
             connectNum = connectNum + 1
             continue
 
-def doLobbyServerStuff(s, clientNo):
+def doLobbyServerStuff(clientsocket, clientNo):
+    #FIXME test that we can open the port first! (main server must not be in charge of connectNum--but we have to use a mutex if we increment it here in lobby server)
+    print 'Client connected. Sending to game lobby ' + str(clientNo) + '.'
+
+    # before moving to UDP socket, tell client lobby port
+    clientsocket.send(pack(STRUCT_FMT_LOBBY, PORT + clientNo))
+
+    # NOTE: we have to open a new listening socket so client sees an open connection (or until we write a client that waits)
+    # bind socket to UDP port
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.bind((HOST, PORT + clientNo))
+
+    clientsocket.shutdown(socket.SHUT_RDWR)
+    clientsocket.close()
+
     # NOTE: https://docs.python.org/2/library/socketserver.html#module-SocketServer
     #       says something about using threads because Python networking may be slow
 
@@ -78,6 +87,8 @@ def doLobbyServerStuff(s, clientNo):
 
         # need to verify sender address? session could easily be clobbered if not
         print data
+
+    print 'Lobby server ' + str(clientNo) + ' is closing.'
 
 def doClientStuff():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
