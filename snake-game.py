@@ -13,35 +13,78 @@ import pygcurse
 
 from Snake import *
 
+#FIXME allow host and port config from command line. what if port is appended to hostname?
 HOST = '' # any network interface
-PORT = 11845 #FIXME allow port config from command line
+PORT = 11845
 
 def main():
     # get program name and fork to server or client mode
-    #FIXME this only works when you explicitly run python interpreter and not the script file
+    #FIXME this only works when you explicitly run python interpreter and not the script file (because of './' before prog name?)
     if 'snakes' == sys.argv[0]:
-        doServerStuff()
+        doMainServerStuff()
     if 'snake' == sys.argv[0]:
         doClientStuff()
 
-def doServerStuff():
+def doMainServerStuff():
+    connectNum = 1
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind((HOST, PORT))
+    s.listen(5) # argument is size of connection backlog
+    print 'Server has started on port ' + str(PORT) + '. Waiting for clients...'
+
+    # wait for connection
+    while 1:
+        (clientsocket, address) = s.accept()
+        pid = os.fork()
+        if (0 == pid):
+            #FIXME test that we can open the port first! (main server must not be in charge of connectNum--but we have to use a mutex if we increment it here in lobby server)
+            print 'Client connected. Sending to game lobby ' + str(connectNum) + '.'
+
+            # before moving to new socket, tell client lobby port
+            clientsocket.send(str(PORT + connectNum))
+            clientsocket.shutdown(socket.SHUT_RDWR)
+            clientsocket.close()
+            s.close()
+
+            # NOTE: we have to open a new listening socket so client sees an open connection
+            # bind socket to UDP port
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.bind((HOST, PORT + connectNum))
+
+            doLobbyServerStuff(s, connectNum)
+            print 'Lobby server ' + str(connectNum) + ' is closing.'
+            break #FIXME find cleaner way for lobby servers to break loop?
+        else:
+            connectNum = connectNum + 1
+            continue
+
+def doLobbyServerStuff(s, clientNo):
     # NOTE: https://docs.python.org/2/library/socketserver.html#module-SocketServer
     #       says something about using threads because Python networking may be slow
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.bind((HOST, PORT))
-    #s.listen(5) # argument is size of connection backlog
-    print 'Game has started. Waiting for messages...'
-
-    #FIXME need to come up with network message scheme
     # wait for connection
+    #FIXME this needs to die eventually; add flag
     while 1:
+        #TODO process whole network queue
         data, addr = s.recvfrom(1024)
+        # need to verify sender address? session could easily be clobbered if not
         print data
 
 def doClientStuff():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((HOST, PORT))
+    print 'Connected to server.'
+
+    #FIXME get lobby info
+    lobbyPort = int(s.recv(8))
+    print 'Joining lobby number ' + str(lobbyPort)
+
+    # move to UDP port for game
+    s.shutdown(socket.SHUT_RDWR)
+    s.close()
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    #s.connect((HOST, lobbyPort))
 
     # these dimension units are in text cells, not pixels
     WIN_WIDTH, WIN_HEIGHT = 60, 35
@@ -59,6 +102,7 @@ def doClientStuff():
     win.autoupdate = False # turn off autoupdate so window doesn't flicker
 
     # main game loop
+    #FIXME client should go back to lobby after game is over
     while True:
         # clear the screen
         #win.erase() # this would be used instead but for a bug...
@@ -112,14 +156,13 @@ def doClientStuff():
             snake1.length += 1
             pellet = Pellet(WIN_WIDTH - 1, WIN_HEIGHT - 1, fgcolor = 'yellow')
             snake1.grow()
-            s.sendall('Player 1 score:' + str(snake1.length))
-
+            s.sendto('Player 1 score:' + str(snake1.length), (HOST, lobbyPort))
         # (SnakeAI) check if player's head is on a pellet. If so, consume it and create a new one
         elif snakeAI.headX == pellet.posx and snakeAI.headY == pellet.posy:
             snakeAI.length += 1
             pellet = Pellet(WIN_WIDTH - 1, WIN_HEIGHT - 1, 'yellow')
             snakeAI.grow()
-            s.sendall('SnakeAI score:' + str(snakeAI.length))
+            s.sendto('SnakeAI score:' + str(snakeAI.length), (HOST, lobbyPort))
 
         # check if any snakes are colliding with any other snakes
         #if snake1.isColl((snake1.headX, snake1.headY)): # previous use of Snake.isColl()
@@ -135,9 +178,6 @@ def doClientStuff():
 
         #TODO check if any snakes have hit the edge
         #if ...
-
-def initClient():
-    pass
 
 if __name__ == "__main__":
     main()
