@@ -7,6 +7,8 @@ import sys
 import os 
 from os.path import basename
 import socket
+from struct import pack
+from struct import unpack
 
 import pygame
 from pygame.locals import *
@@ -17,6 +19,10 @@ from Snake import *
 #FIXME allow host and port config from command line. what if port is appended to hostname?
 HOST = '' # any network interface
 PORT = 11845
+
+MAX_MSG_SIZE = 1024
+
+STRUCT_FMT_LOBBY = '!H'
 
 def main():
     # get program name and fork to server or client mode
@@ -42,8 +48,8 @@ def doMainServerStuff():
             print 'Client connected. Sending to game lobby ' + str(connectNum) + '.'
 
             # before moving to new socket, tell client lobby port
-            clientsocket.send(str(PORT + connectNum))
-            clientsocket.shutdown(socket.SHUT_RDWR)
+            clientsocket.send(pack(STRUCT_FMT_LOBBY, PORT + connectNum))
+            #clientsocket.shutdown(socket.SHUT_RDWR)
             clientsocket.close()
             s.close()
 
@@ -56,6 +62,7 @@ def doMainServerStuff():
             print 'Lobby server ' + str(connectNum) + ' is closing.'
             break #FIXME find cleaner way for lobby servers to break loop?
         else:
+            #FIXME save child ID so we can talk to it?
             connectNum = connectNum + 1
             continue
 
@@ -64,10 +71,11 @@ def doLobbyServerStuff(s, clientNo):
     #       says something about using threads because Python networking may be slow
 
     # wait for connection
-    #FIXME this needs to die eventually; add flag
+    #FIXME this loop needs to die eventually; add flag and/or timeout
     while 1:
         #TODO process whole network queue
-        data, addr = s.recvfrom(1024)
+        data, addr = s.recvfrom(MAX_MSG_SIZE)
+
         # need to verify sender address? session could easily be clobbered if not
         print data
 
@@ -77,14 +85,13 @@ def doClientStuff():
     print 'Connected to server.'
 
     #FIXME get lobby info
-    lobbyPort = int(s.recv(8))
+    lobbyPort = unpack(STRUCT_FMT_LOBBY, s.recv(calcsize(STRUCT_FMT_LOBBY)))[0]
     print 'Joining lobby number ' + str(lobbyPort)
 
     # move to UDP port for game
     s.shutdown(socket.SHUT_RDWR)
     s.close()
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    #s.connect((HOST, lobbyPort))
 
     # these dimension units are in text cells, not pixels
     WIN_WIDTH, WIN_HEIGHT = 60, 35
