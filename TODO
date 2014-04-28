@@ -16,3 +16,5 @@
 * we always need to verify the packet size given by client is valid, see heartbleed bug lol
 
 * verify incoming packets come from the host (server or client) we expect
+
+* make database of player names/passwords

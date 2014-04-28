@@ -1,5 +1,8 @@
-from collections import deque
+#TODO add copyright and license info
+
 import random
+
+from collections import deque
 
 class Dir:
         """An enum of the cardinal directions."""

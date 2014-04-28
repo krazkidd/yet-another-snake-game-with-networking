@@ -1,3 +1,5 @@
+#TODO add copyright and license info
+
 import os
 import sys
 
