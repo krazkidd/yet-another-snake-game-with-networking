@@ -60,11 +60,11 @@ class LobbyServer:
             if s in readable:
                 msg, address = s.recvfrom(MAX_MSG_SIZE)
 
-                msgType, msgLen = unpack('!BH', msg[:3])
+                msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
 
                 if msgType == MessageType.HELLO:
                     print 'Client says hello to lobby.'
-                    s.sendto(pack('!BH', MessageType.HELLO, 3), address)
+                    s.sendto(pack(STRUCT_FMT_HDR, MessageType.HELLO, calcsize(STRUCT_FMT_HDR)), address)
                 elif msgType == MessageType.LOBBY_JOIN:
                     #FIXME send accept or reject message to join request
 
@@ -100,8 +100,9 @@ class LobbyServer:
                     #FIXME
                     pass
                 elif msgType == MessageType.UPDATE:
-                    clientTickNum, newSnakeDir = unpack(STRUCT_FMT_GAME_UPDATE, msg[3:])
+                    clientTickNum, newSnakeDir = unpack(STRUCT_FMT_GAME_UPDATE, msg[calcsize(STRUCT_FMT_HDR):])
                     print 'Tick num: ' + str(clientTickNum) + ', New snake direction: ' + str(newSnakeDir)
+                    #TODO check if we need to (and can) update the game state. if changed, push to other clients
                 elif msgType == MessageType.CHAT:
                     pass
             else:
@@ -134,7 +135,7 @@ class MainServer:
         # serve forever
         while 1:
             # listen for clients
-            (msg, address) = s.recvfrom(MAX_MSG_SIZE)
+            msg, address = s.recvfrom(MAX_MSG_SIZE)
 
             # fork and respond
             #TODO os.fork() only available on *nix
@@ -143,25 +144,24 @@ class MainServer:
             pid = os.fork()
             if pid == 0:
                 #FIXME we get an exception if the input isn't of the expected size, so we need to check msg length
-                unpackedMsg = unpack('!BH', msg)
+                msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
                 # check header for message type and reply accordingly
-                if unpackedMsg[0] == MessageType.HELLO:
+                if msgType == MessageType.HELLO:
                     # send MOTD
                     print 'Client connected. Sending MOTD.'
-                    f = open('MOTD')
-                    #TODO use actual size of MOTD on file, not max (or whichever is less)
-                    buf = pack('!BH', MessageType.MOTD, 3 + MAX_MOTD_SIZE)
                     #TODO catch any exceptions from file access here
-                    buf += f.read(MAX_MOTD_SIZE)
+                    f = open('MOTD')
+                    motdStr = f.read(MAX_MOTD_SIZE)
+                    buf = pack(STRUCT_FMT_HDR, MessageType.MOTD, calcsize(STRUCT_FMT_HDR) + len(motdStr))
+                    buf += motdStr
                     s.sendto(buf, address)
-                elif unpackedMsg[0] == MessageType.LOBBY_REQ:
+                    f.close()
+                elif msgType == MessageType.LOBBY_REQ:
                     # send list of lobbies
-                    print 'Sending lobby list.'
-                    buf = pack('!BH', MessageType.LOBBY_REP, 3 + 1 + numLobbies * 3)
+                    buf = pack(STRUCT_FMT_HDR, MessageType.LOBBY_REP, calcsize(STRUCT_FMT_HDR) + calcsize(STRUCT_FMT_LOBBY_COUNT) + calcsize(STRUCT_FMT_LOBBY) * numLobbies)
                     buf += pack(STRUCT_FMT_LOBBY_COUNT, numLobbies)
                     for lobby in lobbies:
                         buf += pack(STRUCT_FMT_LOBBY, lobby.lobbyNum, lobby.connectPort)
-                    #print '\tMessage size: ' + str(len(buf)) + '. Expected: ' + str(3 + calcsize(STRUCT_FMT_LOBBY_COUNT + STRUCT_FMT_LOBBY_LIST)) + '.'
                     s.sendto(buf, address)
 
                 s.close()

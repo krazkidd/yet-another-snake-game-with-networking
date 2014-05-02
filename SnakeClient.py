@@ -39,7 +39,7 @@ def init():
 def quit():
     # send QUIT message to lobby server if we're connected to one
     if lobbyAddr:
-        s.sendto(pack('!BH', MessageType.LOBBY_QUIT, 3), lobbyAddr)
+        s.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_QUIT, calcsize(STRUCT_FMT_HDR)), lobbyAddr)
 
     s.close()
     pygame.quit()
@@ -56,34 +56,34 @@ def start():
 def joinLobby():
     global lobbyAddr
 
-    s.sendto(pack('!BH', MessageType.HELLO, 3), (HOST, PORT))
+    s.sendto(pack(STRUCT_FMT_HDR, MessageType.HELLO, calcsize(STRUCT_FMT_HDR)), (HOST, PORT))
     #print 'Sending HELLO to server.'
     #TODO print server hostname and address. anything else?
 
     #FIXME allow direct connection to lobbies. if response isn't MOTD, it's a lobby
 
     # get MOTD
-    (msg, srvaddr) = s.recvfrom(3 + MAX_MOTD_SIZE)
+    msg, srvaddr = s.recvfrom(calcsize(STRUCT_FMT_HDR) + MAX_MOTD_SIZE)
     print '\nMessage of the Day from server:'
-    print msg[3:] + '\n'
+    print msg[calcsize(STRUCT_FMT_HDR):] + '\n'
 
     # get lobby info
-    s.sendto(pack('!BH', MessageType.LOBBY_REQ, 3), (HOST, PORT))
-    (msg, srvaddr) = s.recvfrom(MAX_MSG_SIZE)
-    #TODO check size of message
-    lobbyList = unpack(STRUCT_FMT_LOBBY_COUNT + STRUCT_FMT_LOBBY_LIST, msg[3:])
-    print 'There are currently ' + str(lobbyList[0]) + ' lobbies:'
-    for i in range(0, lobbyList[0]):
-        print str(i + 1) + '. Lobby ' + str(lobbyList[1 + i * 2]) + ' on port ' + str(lobbyList[1 + i * 2 + 1])
+    s.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_REQ, calcsize(STRUCT_FMT_HDR)), (HOST, PORT))
+    msg, srvaddr = s.recvfrom(MAX_MSG_SIZE)
+    lobbyCount = int(unpack(STRUCT_FMT_LOBBY_COUNT, msg[calcsize(STRUCT_FMT_HDR)])[0]) # this is a really ugly statement but int(msg[calcsize(STRUCT_FMT_HDR)]) throws an exception
+    lobbyList = msg[calcsize(STRUCT_FMT_HDR) + calcsize(STRUCT_FMT_LOBBY_COUNT):]
+    print 'There are currently ' + str(lobbyCount) + ' lobbies on this server:'
+    for i in range(0, lobbyCount):
+        lobbyNum, lobbyPort = unpack(STRUCT_FMT_LOBBY, lobbyList[i * calcsize(STRUCT_FMT_LOBBY):i * calcsize(STRUCT_FMT_LOBBY) + calcsize(STRUCT_FMT_LOBBY)])
+        print str(i + 1) + '. Lobby ' + str(lobbyNum) + ' on port ' + str(lobbyPort)
 
-    selection = raw_input('Which lobby would you like to join? ')
-
-    selectedLobby = str(lobbyList[1 + (int(selection) - 1) * 2])
-    selectedPort = lobbyList[1 + (int(selection) - 1) * 2 + 1]
-    print 'Joining lobby number ' + selectedLobby + '.'
+    selection = int(raw_input('Which lobby would you like to join? '))
+    
+    selectedLobby, selectedPort = unpack(STRUCT_FMT_LOBBY, lobbyList[selection * calcsize(STRUCT_FMT_LOBBY):selection * calcsize(STRUCT_FMT_LOBBY) + calcsize(STRUCT_FMT_LOBBY)])    
+    print 'Joining lobby number ' + str(selectedLobby) + '.'
 
     # try to join lobby
-    s.sendto(pack('!BH', MessageType.LOBBY_JOIN, 3), (HOST, selectedPort))
+    s.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_JOIN, calcsize(STRUCT_FMT_HDR)), (HOST, selectedPort))
 
     #TODO make sure we joined successfully (listen for ACCEPT or REJECT message)
 
@@ -170,7 +170,7 @@ def processNetMessages():
 
             # only look at it if it's from the server
             if addr == lobbyAddr:
-                msgType, msgLen = unpack('!BH', msg[:3])
+                msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
 
                 if msgType == MessageType.UPDATE:
                     #TODO do something
@@ -180,7 +180,7 @@ def processNetMessages():
 
 def sendNetMessages():
     if game.gameStateChanged == True:
-        msg = pack('!BH', MessageType.UPDATE, 3 + calcsize(STRUCT_FMT_GAME_UPDATE))
+        msg = pack(STRUCT_FMT_HDR, MessageType.UPDATE, calcsize(STRUCT_FMT_HDR) + calcsize(STRUCT_FMT_GAME_UPDATE))
         msg += pack(STRUCT_FMT_GAME_UPDATE, game.tickNum, game.snake1.heading)
         s.sendto(msg, lobbyAddr)
         game.gameStateChanged = False

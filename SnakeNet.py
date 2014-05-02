@@ -21,14 +21,19 @@ MAX_LOBBY_SIZE = 8
 # these dimension units are in text cells, not pixels
 WIN_WIDTH, WIN_HEIGHT = 60, 35
 
+# net message header
+# B: message type
+# H: length of message (including header)
+STRUCT_FMT_HDR = '!BH'
 # number of lobbies
 STRUCT_FMT_LOBBY_COUNT = '!B'
 # info for single lobby
 # B: lobby number
 # H: port number
 STRUCT_FMT_LOBBY = '!BH'
-#FIXME how do we unpack a variable-length list when we want to dynamically create lobbies?
-STRUCT_FMT_LOBBY_LIST = 'BHBHBHBHBH'
+# game update message
+# I: tick num of update (game time elapsed)
+# B: new heading of player's snake
 STRUCT_FMT_GAME_UPDATE = '!IB'
 
 # NOTE: https://docs.python.org/2/library/socketserver.html#module-SocketServer
