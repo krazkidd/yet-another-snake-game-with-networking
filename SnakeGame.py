@@ -1,11 +1,6 @@
 #TODO add copyright and license info
 
-import os
-import sys
-
-import pygame
-from pygame.locals import *
-import pygcurse
+from pygame import event
 
 from Snake import *
 
@@ -20,27 +15,12 @@ class SnakeGame:
 
         self.pellet = Pellet(winWidth - 1, winHeight - 1, 'yellow') 
 
-        # initiate pygame and pygcurse
-        os.environ['SDL_VIDEO_CENTERED'] = '1' # center window in Windows
-        pygame.init()
-        self.win = pygcurse.PygcurseWindow(winWidth, winHeight, 'Snake')
-        self.win.autoupdate = False # turn off autoupdate so window doesn't flicker
+        self.isDirChangeAllowed = True
 
-    def processInput(self):
-        # process input queue
-        for event in pygame.event.get():
-            if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
-                pygame.quit()
-                sys.exit()
-            if event.type == KEYDOWN:
-                if event.key == K_UP:
-                    self.snake1.changeHeading(Dir.Up)
-                elif event.key == K_DOWN:
-                    self.snake1.changeHeading(Dir.Down)
-                elif event.key == K_LEFT:
-                    self.snake1.changeHeading(Dir.Left)
-                elif event.key == K_RIGHT:
-                    self.snake1.changeHeading(Dir.Right)
+    def processInput(self, direction):
+        if self.isDirChangeAllowed:
+            self.snake1.changeHeading(direction)
+            self.isDirChangeAllowed = False
 
     def tick(self):
         # move players' snakes
@@ -76,27 +56,4 @@ class SnakeGame:
         #TODO check if any snakes have hit the edge
         #if ...
 
-    def drawWindow(self):
-        # clear the screen
-        #win.erase() # this would be used instead but for a bug...
-        self.win.fill(' ')
-
-        # draw outside border
-        #TODO
-
-        # draw game data
-        self.win.putchars("Score: " + str(self.snake1.length), 0, 0)
-
-        #FIXME draw snakes and pellet (get positions from class)
-        for pos in self.snake1.body:
-            # pos is a tuple (x, y)
-            self.win.putchars('O', pos[0], pos[1], fgcolor = self.snake1.fgcolor)
-
-        for pos in self.snakeAI.body:
-            self.win.putchars('O', pos[0], pos[1], self.snakeAI.fgcolor)
-
-        # draw pellet
-        self.win.putchar('+', self.pellet.posx, self.pellet.posy, self.pellet.fgcolor)
-
-        # actually paint the window
-        self.win.update()
+        self.isDirChangeAllowed = True

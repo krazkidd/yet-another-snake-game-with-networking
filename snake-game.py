@@ -2,16 +2,19 @@
 
 #TODO add copyright and license info
 
+import sys
+
 from os.path import basename
 
-from SnakeNet import *
+import SnakeClient
+import SnakeServer
 
 def main():
     # get program name and fork to server or client mode
     if 'snakes' == basename(sys.argv[0]):
-        MainServer.start()
+        SnakeServer.MainServer.start()
     elif 'snake' == basename(sys.argv[0]):
-        Client.start()
+        SnakeClient.start()
     else:
         print 'Usage: This program must be called via symlink with name `snake` (client) or `snakes` (server).'
 
