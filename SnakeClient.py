@@ -37,9 +37,6 @@ def init():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 def quit():
-    global lobbyAddr
-    global s
-
     # send QUIT message to lobby server if we're connected to one
     if lobbyAddr:
         s.sendto(pack('!BH', MessageType.LOBBY_QUIT, 3), lobbyAddr)
@@ -50,12 +47,13 @@ def quit():
 
 def start():
     init()
-    #joinLobby()
+    joinLobby()
+    #TODO process lobby messages to track lobby state and print
+    #TODO wait for START message
     startGame()
     quit()
 
 def joinLobby():
-    global s
     global lobbyAddr
 
     s.sendto(pack('!BH', MessageType.HELLO, 3), (HOST, PORT))
@@ -122,8 +120,6 @@ def startGame():
         time.sleep(0.1)
 
 def drawWindow():
-    global win
-
     # clear the screen
     #win.erase() # this would be used instead but for a bug...
     win.fill(' ')
@@ -165,21 +161,26 @@ def processUserInput():
                 game.processInput(Dir.Right)
 
 def processNetMessages():
-    global s
-    global lobbyAddr
-
     # NOTE: I use select because someone said it's easier than setting non-blocking mode
     readable, writable, exceptional = select([s], [], [], 0)
 
     while readable:
         if s in readable:
-            (msg, addr) = s.recvfrom(MAX_MSG_SIZE)
+            msg, addr = s.recvfrom(MAX_MSG_SIZE)
 
             # only look at it if it's from the server
             if addr == lobbyAddr:
-                pass
+                msgType, msgLen = unpack('!BH', msg[:3])
+
+                if msgType == MessageType.UPDATE:
+                    #TODO do something
+                    pass
         
         readable, writable, exceptional = select([s], [], [], 0)
 
 def sendNetMessages():
-    pass
+    if game.gameStateChanged == True:
+        msg = pack('!BH', MessageType.UPDATE, 3 + calcsize(STRUCT_FMT_GAME_UPDATE))
+        msg += pack(STRUCT_FMT_GAME_UPDATE, game.tickNum, game.snake1.heading)
+        s.sendto(msg, lobbyAddr)
+        game.gameStateChanged = False

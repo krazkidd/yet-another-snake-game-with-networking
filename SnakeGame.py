@@ -16,11 +16,14 @@ class SnakeGame:
         self.pellet = Pellet(winWidth - 1, winHeight - 1, 'yellow') 
 
         self.isDirChangeAllowed = True
+        self.gameStateChanged = False
+        self.tickNum = 0
 
     def processInput(self, direction):
         if self.isDirChangeAllowed:
             self.snake1.changeHeading(direction)
             self.isDirChangeAllowed = False
+            self.gameStateChanged = True
 
     def tick(self):
         # move players' snakes
@@ -57,3 +60,4 @@ class SnakeGame:
         #if ...
 
         self.isDirChangeAllowed = True
+        self.tickNum += 1

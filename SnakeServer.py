@@ -2,15 +2,12 @@ import time
 import os 
 import socket
 import curses
+import sys
 
 from struct import pack
 from struct import unpack
 from struct import calcsize
 from select import select
-
-import pygame
-from pygame.locals import *
-import pygcurse
 
 import SnakeGame
 from SnakeNet import *
@@ -57,40 +54,58 @@ class LobbyServer:
 
       #TODO only allow one player change per game tick
 
-            # wait for connection
-            (msg, address) = s.recvfrom(MAX_MSG_SIZE)
+            # NOTE: we want select to timeout in order to see if the game needs to tick
+            readable, writable, exceptional = select([s], [], [], 0.025)
 
-        #FIXME can't use unpack until we know the length of message and we're sure it's what we're expecting. just look at header.
-        #      we have been using unpack because we're not sure how else to get bytes off the wire in Python
-            if unpack('!BH', msg)[0] == MessageType.HELLO:
-                print 'Client says hello to lobby.'
-                s.sendto(pack('!BH', MessageType.HELLO, 3), address)
-            elif unpack('!BH', msg)[0] == MessageType.LOBBY_JOIN:
-                #FIXME send accept or reject message to join request
-                if address not in activePlayers and (len(activePlayers) + len(spectatingPlayers) < MAX_LOBBY_SIZE):
-                    print 'Woohoo! We got a new client!'
-                    #TODO tell other clients we have another player 
-                    #FIXME add to spectating players list
-                    #spectatingPlayers.add(address)
-                    activePlayers.add((address, 0))
-            elif unpack('!BH', msg)[0] == MessageType.READY:
-                #TODO only set to ready if there are at least 2 players
-                if (address, 0) in activePlayers:
-                    activePlayers.remove((address, 0)) # 0 means not ready
-                    #TODO can we keep the set ordered?
-                    activePlayers.add((address, 1)) # 1 means ready
-                
-                #FIXME if len(activePlayers) > 1...
-                readyToStart = True
-                for (addr, status) in activePlayers:
-                    if status != 1:
-                        readyToStart = False
-                        break
-                if readyToStart:
+            if s in readable:
+                msg, address = s.recvfrom(MAX_MSG_SIZE)
+
+                msgType, msgLen = unpack('!BH', msg[:3])
+
+                if msgType == MessageType.HELLO:
+                    print 'Client says hello to lobby.'
+                    s.sendto(pack('!BH', MessageType.HELLO, 3), address)
+                elif msgType == MessageType.LOBBY_JOIN:
+                    #FIXME send accept or reject message to join request
+
+                    #FIXME if the client is already in a list, clearly they were dropped. i need to handle that case
+                    if (address, 0) not in self.activePlayers and (address, 1) not in self.activePlayers and address not in self.spectatingPlayers and (len(self.activePlayers) + len(self.spectatingPlayers) < MAX_LOBBY_SIZE):
+                        print 'Woohoo! We got a new client!'
+                        #TODO tell other clients we have another player 
+                        #FIXME add to spectating players list
+                        #spectatingPlayers.add(address)
+                        self.activePlayers.add((address, 1))
+                elif msgType == MessageType.LOBBY_QUIT:
+                    #TODO
+                    pass
+                elif msgType == MessageType.READY:
+                    #TODO only set to ready if there are at least 2 players
+                    if (address, 0) in self.activePlayers:
+                        self.activePlayers.remove((address, 0)) # 0 means not ready
+                        #TODO can we keep the set in the same order?
+                        self.activePlayers.add((address, 1)) # 1 means ready
+                    
+                    #FIXME if len(activePlayers) > 1...
+                    # check if everyone is ready to start
+                    #TODO set a timer when a majority is ready in order to prevent griefers
+                    readyToStart = True
+                    for addr, status in self.activePlayers:
+                        if status != 1:
+                            readyToStart = False
+                            break
+                    if readyToStart:
+                        #FIXME
+                        pass
+                elif msgType == MessageType.NOT_READY:
                     #FIXME
                     pass
-            elif UPDATE:
-                #FIXME
+                elif msgType == MessageType.UPDATE:
+                    clientTickNum, newSnakeDir = unpack(STRUCT_FMT_GAME_UPDATE, msg[3:])
+                    print 'Tick num: ' + str(clientTickNum) + ', New snake direction: ' + str(newSnakeDir)
+                elif msgType == MessageType.CHAT:
+                    pass
+            else:
+                #TODO what to do for timeout
                 pass
 
         print 'Lobby server ' + str(clientNo) + ' is closing.'

@@ -29,6 +29,7 @@ STRUCT_FMT_LOBBY_COUNT = '!B'
 STRUCT_FMT_LOBBY = '!BH'
 #FIXME how do we unpack a variable-length list when we want to dynamically create lobbies?
 STRUCT_FMT_LOBBY_LIST = 'BHBHBHBHBH'
+STRUCT_FMT_GAME_UPDATE = '!IB'
 
 # NOTE: https://docs.python.org/2/library/socketserver.html#module-SocketServer
 #       says something about using threads because Python networking may be slow
