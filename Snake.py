@@ -100,19 +100,23 @@ class Snake:
                 The Snake cannot go backwards, so the only real change that
                 can happen is to turn left or right.
 
+                Returns False if there was no heading change; True if there was 
+                a change.
+
                 """
 
                 # don't do anything if the new heading is opposite the current heading
                 if self.heading == Dir.Up and newHeading == Dir.Down:
-                        return
+                        return False
                 elif self.heading == Dir.Down and newHeading == Dir.Up:
-                        return
+                        return False
                 elif self.heading == Dir.Left and newHeading == Dir.Right:
-                        return
+                        return False
                 elif self.heading == Dir.Right and newHeading == Dir.Left:
-                        return
+                        return False
 
                 self.heading = newHeading
+                return True
 
         def isColl(self, otherSnake):
 
@@ -183,6 +187,11 @@ class SnakeAI(Snake):
                         self.changeHeading(Dir.Right)
                 elif p.posx < self.headX:
                         self.changeHeading(Dir.Left)
+
+                #TODO this allows snake to bite itself because we actually change heading in the
+                #     if block above (without actually moving the snake's body) and then change
+                #     the direction back on itself here (this bug reveals itself when the snake
+                #     is moving up and a new pellet appears below the Y position of the head)
                 if p.posy < self.headY:
                         self.changeHeading(Dir.Up)
                 elif p.posy > self.headY:

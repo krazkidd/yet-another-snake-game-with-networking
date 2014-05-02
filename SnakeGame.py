@@ -21,9 +21,9 @@ class SnakeGame:
 
     def processInput(self, direction):
         if self.isDirChangeAllowed:
-            self.snake1.changeHeading(direction)
-            self.isDirChangeAllowed = False
-            self.gameStateChanged = True
+            if self.snake1.changeHeading(direction):
+                self.isDirChangeAllowed = False
+                self.gameStateChanged = True
 
     def tick(self):
         # move players' snakes
