@@ -20,6 +20,7 @@ class SnakeGame:
         self.tickNum = 0
 
     def processInput(self, direction):
+        #TODO allow player to change direction/heading. to correct a mistake...
         if self.isDirChangeAllowed:
             if self.snake1.changeHeading(direction):
                 self.isDirChangeAllowed = False

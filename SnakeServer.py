@@ -24,90 +24,103 @@ class LobbyServer:
     def start(self):
         # open a socket
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.setblocking(0)
         s.bind((HOST, self.connectPort))
         print 'Lobby server ' + str(self.lobbyNum) + ' has started on port ' + str(self.connectPort) + '. Waiting for clients...'
 
-#FIXME need to listen for new and current clients with select() or something
-#and run the game in it's own thread???
-
-                # NOTE: summary of net stuff
-                # when all players are ready, start a new game and send
-                #   initial state
-                # get messages from players and update game state
-                #  * we don't need to update any other player right away unless
-                #    they are very close
-                #  * but we do need to send updates every so often just to keep
-                #    clients synch'd
-                # the only client updates should be the turning of the avatar (left or right)
-                #  * keep track of a sequence number in update packets, as well as client
-                #    gameworld ticks since last update (so the server can reproduce what client has)
+        # NOTE: summary of net stuff
+        # when all players are ready, start a new game and send
+        #   initial state
+        # get messages from players and update game state
+        #  * we don't need to update any other player right away unless
+        #    they are very close
+        #  * but we do need to send updates every so often just to keep
+        #    clients synch'd
+        # the only client updates should be the turning of the avatar (left or right)
+        #  * keep track of a sequence number in update packets, as well as client
+        #    gameworld ticks since last update (so the server can reproduce what client has)
 
         while 1:
-
-#FIXME do we really need threads or select()? all clients use the one port and send UDP messages. and we don't read stdin...
-#      However, we do need the game to tick() while waiting for net messages. so we need to (*quickly*) poll and handle any messages
-#      (and not block if there are none) or run the game in a thread. the game needs to tick at a steady rate, but even if there's 
-#      contention for the socket, we should want to process all messages that came in, because 
-#      active player messages need to be handled ASAP.
-#      I could also use a timeout on the select() call and periodically check if we need to tick(). That will be the simplest thing and
-#      the tick()'s will depend on the granularity of the timeout, but it shouldn't be too bad
-
-      #TODO only allow one player change per game tick
-
-            # NOTE: we want select to timeout in order to see if the game needs to tick
+            # NOTE: We want select to timeout in order to see if the game needs to tick
+            #       We use select() simply so we don't have to do our own timeout
             readable, writable, exceptional = select([s], [], [], 0.025)
 
             if s in readable:
+                # NOTE: it's possible for the socket to not actually be ready, like in the case of a checksum error
                 msg, address = s.recvfrom(MAX_MSG_SIZE)
 
-                msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
+                #FIXME this will break the game if the server receives a lot of messages
+                while msg:
+                    msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
 
-                if msgType == MessageType.HELLO:
-                    print 'Client says hello to lobby.'
-                    s.sendto(pack(STRUCT_FMT_HDR, MessageType.HELLO, calcsize(STRUCT_FMT_HDR)), address)
-                elif msgType == MessageType.LOBBY_JOIN:
-                    #FIXME send accept or reject message to join request
+                    if msgType == MessageType.HELLO:
+                        print 'Client says hello to lobby.'
+                        s.sendto(pack(STRUCT_FMT_HDR, MessageType.HELLO, calcsize(STRUCT_FMT_HDR)), address)
+                    elif msgType == MessageType.LOBBY_JOIN:
+                        #FIXME send accept or reject message to join request
 
-                    #FIXME if the client is already in a list, clearly they were dropped. i need to handle that case
-                    if (address, 0) not in self.activePlayers and (address, 1) not in self.activePlayers and address not in self.spectatingPlayers and (len(self.activePlayers) + len(self.spectatingPlayers) < MAX_LOBBY_SIZE):
-                        print 'Woohoo! We got a new client!'
-                        #TODO tell other clients we have another player 
-                        #FIXME add to spectating players list
-                        #spectatingPlayers.add(address)
-                        self.activePlayers.add((address, 1))
-                elif msgType == MessageType.LOBBY_QUIT:
-                    #TODO
-                    pass
-                elif msgType == MessageType.READY:
-                    #TODO only set to ready if there are at least 2 players
-                    if (address, 0) in self.activePlayers:
-                        self.activePlayers.remove((address, 0)) # 0 means not ready
-                        #TODO can we keep the set in the same order?
-                        self.activePlayers.add((address, 1)) # 1 means ready
-                    
-                    #FIXME if len(activePlayers) > 1...
-                    # check if everyone is ready to start
-                    #TODO set a timer when a majority is ready in order to prevent griefers
-                    readyToStart = True
-                    for addr, status in self.activePlayers:
-                        if status != 1:
-                            readyToStart = False
-                            break
-                    if readyToStart:
+                        #FIXME if the client is already in a list, clearly they were dropped. i need to handle that case
+                        if (address, 0) not in self.activePlayers and (address, 1) not in self.activePlayers and address not in self.spectatingPlayers and (len(self.activePlayers) + len(self.spectatingPlayers) < MAX_LOBBY_SIZE):
+                            print 'Woohoo! We got a new client!'
+                            #TODO tell other clients we have another player 
+                            #FIXME add to spectating players list instead
+                            #spectatingPlayers.add(address)
+                            self.activePlayers.add((address, 1))
+                    elif msgType == MessageType.LOBBY_QUIT:
+                        #FIXME use a dictionary instead of array of tuples...
+                        if (address, 0) in self.activePlayers:
+                            self.activePlayers.remove((address, 0))
+                        elif (address, 1) in self.activePlayers:
+                            self.activePlayers.remove((address, 1))
+                        elif address in self.spectatingPlayers:
+                            self.spectatingPlayers.remove(address)
+                            #TODO tell other clients we lost a player 
+                    elif msgType == MessageType.READY:
+                        if (address, 0) in self.activePlayers:
+                            self.activePlayers.remove((address, 0)) # 0 means not ready
+                            #TODO can we keep the set in the same order?
+                            self.activePlayers.add((address, 1)) # 1 means ready
+                        
+                        # check if everyone is ready to start
+                        #TODO set a timer when a majority is ready in order to prevent griefers
+                        readyToStart = True
+                        for addr, status in self.activePlayers:
+                            if status != 1:
+                                readyToStart = False
+                                break
+                        if readyToStart:
+                            #FIXME start a game
+                            pass
+                    elif msgType == MessageType.NOT_READY:
+                        if (address, 1) in self.activePlayers:
+                            self.activePlayers.remove((address, 1))
+                            #TODO can we keep the set in the same order?
+                            self.activePlayers.add((address, 0))
+                        #TODO if we started the majority-ready timer and we lost majority, stop it
+                    elif msgType == MessageType.UPDATE:
+                        clientTickNum, newSnakeDir = unpack(STRUCT_FMT_GAME_UPDATE, msg[calcsize(STRUCT_FMT_HDR):])
                         #FIXME
+                        print 'Tick num: ' + str(clientTickNum) + ', New snake direction: ' + str(newSnakeDir)
+                        #TODO check if we need to (and can--don't allow multiple changes per tick) update the game state. if changed, push to other clients
+                        #TODO only send update if there was a state change
+                        for addr, rdyStatus in self.activePlayers:
+                            # don't echo UPDATE to player that just sent it
+                            #TODO use better variable names
+                            if addr != address:
+                                s.sendto(msg, addr)
+                        for addr, rdyStatus in self.spectatingPlayers:
+                            #TODO use better variable names
+                            s.sendto(msg, addr)
+                    elif msgType == MessageType.CHAT:
                         pass
-                elif msgType == MessageType.NOT_READY:
-                    #FIXME
-                    pass
-                elif msgType == MessageType.UPDATE:
-                    clientTickNum, newSnakeDir = unpack(STRUCT_FMT_GAME_UPDATE, msg[calcsize(STRUCT_FMT_HDR):])
-                    print 'Tick num: ' + str(clientTickNum) + ', New snake direction: ' + str(newSnakeDir)
-                    #TODO check if we need to (and can) update the game state. if changed, push to other clients
-                elif msgType == MessageType.CHAT:
-                    pass
-            else:
-                #TODO what to do for timeout
-                pass
+
+                    try:
+                        # check for another message
+                        msg, address = s.recvfrom(MAX_MSG_SIZE)
+                    except socket.error:
+                        msg = None
+
+            #FIXME test if it's time to tick()
 
         print 'Lobby server ' + str(clientNo) + ' is closing.'
 

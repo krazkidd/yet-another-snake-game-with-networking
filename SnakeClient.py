@@ -87,7 +87,7 @@ def joinLobby():
 
     #TODO make sure we joined successfully (listen for ACCEPT or REJECT message)
 
-    lobbyAddr = (HOST, selectedPort)
+    lobbyAddr = (srvaddr[0], selectedPort)
 
 def startGame():
     global win
@@ -105,18 +105,19 @@ def startGame():
 
     # main game loop
     while True:
+        # check user input
         processUserInput()
+        # get messages from server
         processNetMessages()
 
         game.tick()
 
         drawWindow()
 
-        #TODO don't bother sending message more than once per tick (how to synch with server?) and only if client state changed
-        # check if there is input from user
         sendNetMessages()
 
         # pause the screen for just a bit
+        #TODO use a finer step and only tick() every so often, so we process more input, a.k.a. poll more
         time.sleep(0.1)
 
 def drawWindow():
@@ -144,8 +145,6 @@ def drawWindow():
     win.update()
 
 def processUserInput():
-    global game
-
     # process input queue
     for event in pygame.event.get():
         if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
@@ -161,20 +160,21 @@ def processUserInput():
                 game.processInput(Dir.Right)
 
 def processNetMessages():
-    # NOTE: I use select because someone said it's easier than setting non-blocking mode
+    # NOTE: I use select because someone on StackOverflow said it's easier than setting non-blocking mode
     readable, writable, exceptional = select([s], [], [], 0)
 
+    #FIXME this will break the game if the server receives a lot of messages
     while readable:
-        if s in readable:
-            msg, addr = s.recvfrom(MAX_MSG_SIZE)
+        #if s in readable:
+        msg, addr = s.recvfrom(MAX_MSG_SIZE)
 
-            # only look at it if it's from the server
-            if addr == lobbyAddr:
-                msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
+        print 'lobby addr: ' + str(lobbyAddr) + ', msg addr: ' + str(addr)
+        # only look at it if it's from the server
+        if addr == lobbyAddr:
+            msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
 
-                if msgType == MessageType.UPDATE:
-                    #TODO do something
-                    pass
+            if msgType == MessageType.UPDATE:
+                print 'We got an update from another player.'
         
         readable, writable, exceptional = select([s], [], [], 0)
 
