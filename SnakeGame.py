@@ -1,64 +1,85 @@
-#TODO add copyright and license info
+# -*- coding: utf-8 -*-
+
+# *************************************************************************
+#
+#  This file is part of Snake-M.
+#
+#  Copyright © 2014 Mark Ross <krazkidd@gmail.com>
+#
+#  Snake-M is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Snake-M is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with Snake-M.  If not, see <http://www.gnu.org/licenses/>.
+#  
+# *************************************************************************
 
 from pygame import event
 
 from Snake import *
 
+class GameState:
+    """Enum for Snake game state"""
+    GAME_OVER = 1
+
 class SnakeGame:
-    def __init__(self, winWidth, winHeight):
-        self.winWidth = winWidth
-        self.winHeight = winHeight
+    def __init__(self, boardWidth, boardHeight, playersList):
+        self.boardWidth = boardWidth
+        self.boardHeight = boardHeight
 
         # instantiate players' snakes
-        self.snake1 = Snake(15, 15, Dir.Right, 4)
-        self.snakeAI = SnakeAI(30, 30, Dir.Right, 4)
+        snake1 = Snake(15, 15, Dir.Right, 4)
+        snake2 = SnakeAI(30, 30, Dir.Right, 4)
+        #TODO if playersList is less than size of game, add robot players (to playersList, so the zip() works)
+        #snakeAI = SnakeAI(30, 30, Dir.Right, 4)
+        self.snakes = zip(playersList, (snake1, snake2))
 
-        self.pellet = Pellet(winWidth - 1, winHeight - 1, 'yellow') 
+        self.pellet = Pellet(boardWidth - 1, boardHeight - 1, 'yellow') 
 
-        self.isDirChangeAllowed = True
         self.gameStateChanged = False
         self.tickNum = 0
+    # end __init__()
 
     def processInput(self, direction):
-        #TODO allow player to change direction/heading. to correct a mistake...
-        if self.isDirChangeAllowed:
-            if self.snake1.changeHeading(direction):
-                self.isDirChangeAllowed = False
-                self.gameStateChanged = True
+FIXME
+        if self.snake1.changeHeading(direction):
+            self.gameStateChanged = True
+    # end processInput()
 
+#FIXME return game condition (running or game over) or report it via member variable
     def tick(self):
-        # move players' snakes
-        self.snake1.move(self.pellet)
-        #Snake.move(snake1) # an alternative way to call a particular object's method
-        self.snakeAI.move(self.pellet)    
-        
-        # check if player's head is on a pellet. If so, consume it and create a new one
-        if self.snake1.headX == self.pellet.posx and self.snake1.headY == self.pellet.posy:
-            self.snake1.length += 1
-            self.pellet = Pellet(self.winWidth - 1, self.winHeight - 1, fgcolor = 'yellow')
-            self.snake1.grow()
-            #s.sendto('Player 1 score:' + str(self.snake1.length), (HOST, lobbyPort))
-        # (SnakeAI) check if player's head is on a pellet. If so, consume it and create a new one
-        elif self.snakeAI.headX == self.pellet.posx and self.snakeAI.headY == self.pellet.posy:
-            self.snakeAI.length += 1
-            self.pellet = Pellet(self.winWidth - 1, self.winHeight - 1, 'yellow')
-            self.snakeAI.grow()
-            #s.sendto('SnakeAI score:' + str(self.snakeAI.length), (HOST, lobbyPort))
+        for snake in self.snakes:
+            # move players' snakes
+            #FIXME snakes need to know positions of other snakes (at least in the local area)
+            snake.move(self.pellet)
 
-        # check if any snakes are colliding with any other snakes
-        #if self.snake1.isColl((self.snake1.headX, self.snake1.headY)): # previous use of Snake.isColl()
-        if self.snake1.isColl(self.snake1):
-            print 'snake1 bit itself'     
-        elif self.snake1.isColl(self.snakeAI):
-            print 'snake1 ran into the other snake'     
+            # check for self-collision
+            if snake.isColl(snake):
+                print 'a snake bit itself'     
 
-        if self.snakeAI.isColl(self.snakeAI):
-            print 'snakeAI bit itself'
-        elif self.snakeAI.isColl(self.snake1):
-            print 'snakeAI ran into the other snake'     
+            # check if colliding with any other snakes
+            #FIXME collision detection (do something better than O(n²)
+            for otherSnake in self.snakes:
+                if snake != otherSnake:
+                    elif snake.isColl(otherSnake):
+                        print 'some snake ran into another snake'     
 
-        #TODO check if any snakes have hit the edge
-        #if ...
+            #TODO check if hitting the edge
+            #if ...
 
-        self.isDirChangeAllowed = True
+            # check if snake is on a pellet
+            if snake.headX == self.pellet.posx and snake.headY == self.pellet.posy:
+                snake.length += 1
+                self.pellet = Pellet(self.winWidth - 1, self.winHeight - 1, fgcolor = 'yellow')
+                snake.grow()
+
         self.tickNum += 1
+    # end tick()
+# end class SnakeGame

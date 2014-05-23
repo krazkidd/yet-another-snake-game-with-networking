@@ -1,0 +1,36 @@
+Thanks for playing my snake game! This project doesn't have a real
+name, so for the purposes of copyright and what-not, I'll just call it
+Snake-M (M for Multiplayer).
+
+Features:
+* Networked multiplayer
+* Lobby servers
+* Maybe multiple game modes and bots (in the future...)
+
+Author: Mark Ross
+Contact: krazkidd@gmail.com
+Project hosted at:
+  https://code.google.com/p/yet-another-snake-game-with-networking/
+
+License: GPLv3 (see COPYING file)
+
+Requires:
+* Python 2.x (developed on 2.7)
+* Pygcurse 0.1 alpha
+  http://inventwithpython.com/pygcurse/
+
+Currently the game should work on any PC platform. I think.
+
+Playing the game:
+  The main script is snake-game.py. Provided are two symlinks
+`snake` and `snakes` which start the client or main server, 
+respectively. (Do the symlinks work on Windows?)
+
+  When the main server is started with `snakes`, it will start
+several lobby servers and then listen for clients. Clients will
+first contact the main server to retrieve a list of the lobby
+servers and the ports they are listening on, display them to the
+user, and then contact the selected lobby server.
+
+  The lobby server relays messages between clients and maintains
+an authoritative game state.

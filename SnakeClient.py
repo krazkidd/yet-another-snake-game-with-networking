@@ -1,8 +1,32 @@
+# -*- coding: utf-8 -*-
+
+# *************************************************************************
+#
+#  This file is part of Snake-M.
+#
+#  Copyright © 2014 Mark Ross <krazkidd@gmail.com>
+#
+#  Snake-M is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Snake-M is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with Snake-M.  If not, see <http://www.gnu.org/licenses/>.
+#  
+# *************************************************************************
+
 import time
 import os 
 import socket
 import sys
 
+from time import time
 from struct import pack
 from struct import unpack
 from struct import calcsize
@@ -35,6 +59,7 @@ def init():
     global s
 
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# end init()
 
 def quit():
     # send QUIT message to lobby server if we're connected to one
@@ -44,14 +69,31 @@ def quit():
     s.close()
     pygame.quit()
     sys.exit()
+# end quit()
 
 def start():
     init()
     joinLobby()
-    #TODO process lobby messages to track lobby state and print
-    #TODO wait for START message
-    startGame()
+
+    # main game loop
+    while True:
+        # check user input
+        processUserInput()
+
+        # get messages from server
+        processNetMessages()
+
+        if game:
+            currTime = time()
+            if currTime - lastTickTime > 0.1:
+                game.tick()
+                lastTickTime = currTime
+                drawWindow()
+    # end while (main client loop)
+
+    #TODO this is never reached
     quit()
+# end start()
 
 def joinLobby():
     global lobbyAddr
@@ -88,10 +130,14 @@ def joinLobby():
     #TODO make sure we joined successfully (listen for ACCEPT or REJECT message)
 
     lobbyAddr = (srvaddr[0], selectedPort)
+# end joinLobby() 
 
 def startGame():
     global win
     global game
+
+FIXME need IDs list from server
+    game = SnakeGame.SnakeGame(WIN_WIDTH, WIN_HEIGHT, (0, 1)))
 
     # initiate pygame and pygcurse
     os.environ['SDL_VIDEO_CENTERED'] = '1' # center window in Windows
@@ -99,26 +145,8 @@ def startGame():
     win = pygcurse.PygcurseWindow(WIN_WIDTH, WIN_HEIGHT, 'Snake')
     win.autoupdate = False # turn off autoupdate so window doesn't flicker
 
-    game = SnakeGame.SnakeGame(WIN_WIDTH, WIN_HEIGHT)
-
     drawWindow()
-
-    # main game loop
-    while True:
-        # check user input
-        processUserInput()
-        # get messages from server
-        processNetMessages()
-
-        game.tick()
-
-        drawWindow()
-
-        sendNetMessages()
-
-        # pause the screen for just a bit
-        #TODO use a finer step and only tick() every so often, so we process more input, a.k.a. poll more
-        time.sleep(0.1)
+# end startGame()
 
 def drawWindow():
     # clear the screen
@@ -129,20 +157,20 @@ def drawWindow():
     #TODO
 
     # draw game data
-    win.putchars("Score: " + str(game.snake1.length), 0, 0)
+    win.putchars("Player 1 score: " + str(game.snakes[0].length), 0, 0)
+    win.putchars("Player 2 score: " + str(game.snakes[1].length), 30, 0)
 
-    for pos in game.snake1.body:
-        # pos is a tuple (x, y)
-        win.putchars('O', pos[0], pos[1], fgcolor = game.snake1.fgcolor)
-
-    for pos in game.snakeAI.body:
-        win.putchars('O', pos[0], pos[1], game.snakeAI.fgcolor)
+    for snake in game.snakes:
+        for pos in snake:
+            # pos is a tuple (x, y)
+            win.putchars('O', pos[0], pos[1], fgcolor = snake.fgcolor)
 
     # draw pellet
     win.putchar('+', game.pellet.posx, game.pellet.posy, game.pellet.fgcolor)
 
     # actually paint the window
     win.update()
+# end drawWindow()
 
 def processUserInput():
     # process input queue
@@ -159,24 +187,34 @@ def processUserInput():
             elif event.key == K_RIGHT:
                 game.processInput(Dir.Right)
 
+    FIXME  send player input if it changed game state
+    sendNetMessages()
+# end processUserInput()
+
 def processNetMessages():
     # NOTE: I use select because someone on StackOverflow said it's easier than setting non-blocking mode
     readable, writable, exceptional = select([s], [], [], 0)
 
-    #FIXME this will break the game if the server receives a lot of messages
+    #FIXME this will break the game if the client receives a lot of messages (because it won't handle user input)
     while readable:
         #if s in readable:
         msg, addr = s.recvfrom(MAX_MSG_SIZE)
 
-        print 'lobby addr: ' + str(lobbyAddr) + ', msg addr: ' + str(addr)
         # only look at it if it's from the server
         if addr == lobbyAddr:
             msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
 
-            if msgType == MessageType.UPDATE:
+            if msgType == INIT_STATE:
+                FIXME
+            elif msgType == START:
+                startGame()
+            elif msgType == MessageType.SERVER_UPDATE:
+                FIXME
+            elif msgType == MessageType.CLIENT_UPDATE:
                 print 'We got an update from another player.'
         
         readable, writable, exceptional = select([s], [], [], 0)
+# end processNetMessages()
 
 def sendNetMessages():
     if game.gameStateChanged == True:
@@ -184,3 +222,4 @@ def sendNetMessages():
         msg += pack(STRUCT_FMT_GAME_UPDATE, game.tickNum, game.snake1.heading)
         s.sendto(msg, lobbyAddr)
         game.gameStateChanged = False
+# end sendNetMessages()
