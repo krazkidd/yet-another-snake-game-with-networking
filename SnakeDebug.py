@@ -25,4 +25,4 @@ DEBUG = True
 
 def print_debug(string):
     if DEBUG:
-        print str(string)
+        print 'DEBUG: ' + str(string)
