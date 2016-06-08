@@ -15,7 +15,9 @@ Project hosted at:
 License: GPLv3 (see COPYING file)
 
 Requires:
-* Python 2.x (developed on 2.7)
+* Unix (due to use of Python's os.fork())
+* Python 2.7
+* Pygame 1.9
 * Pygcurse 0.1 alpha
   http://inventwithpython.com/pygcurse/
 

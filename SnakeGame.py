@@ -25,6 +25,9 @@ from pygame import event
 
 from Snake import *
 
+# these dimension units are in text cells, not pixels
+WIN_WIDTH, WIN_HEIGHT = 60, 35
+
 class GameState:
     """Enum for Snake game state"""
     GAME_OVER = 1
@@ -48,7 +51,7 @@ class SnakeGame:
     # end __init__()
 
     def processInput(self, direction):
-FIXME
+#FIXME
         if self.snake1.changeHeading(direction):
             self.gameStateChanged = True
     # end processInput()
@@ -68,7 +71,7 @@ FIXME
             #FIXME collision detection (do something better than O(n²)
             for otherSnake in self.snakes:
                 if snake != otherSnake:
-                    elif snake.isColl(otherSnake):
+                    if snake.isColl(otherSnake):
                         print 'some snake ran into another snake'     
 
             #TODO check if hitting the edge

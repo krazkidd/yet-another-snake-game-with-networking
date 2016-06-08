@@ -23,14 +23,12 @@
 
 import time
 import os 
-import socket
 import sys
 
 from time import time
 from struct import pack
 from struct import unpack
 from struct import calcsize
-from select import select
 
 import pygame
 from pygame.locals import *
@@ -58,86 +56,80 @@ win = None
 def init():
     global s
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s = GetSocketForClient()
 # end init()
 
 def quit():
     # send QUIT message to lobby server if we're connected to one
     if lobbyAddr:
-        s.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_QUIT, calcsize(STRUCT_FMT_HDR)), lobbyAddr)
+        SendQuitMessageTo(s, lobbyAddr)
 
     s.close()
+
     pygame.quit()
     sys.exit()
 # end quit()
 
 def start():
+    global game
+
     init()
     joinLobby()
 
-    # main game loop
-    while True:
-        # check user input
-        processUserInput()
+    try:
+        # main game loop
+        while True:
+            if game:
+                # check user input
+                propertyserInput()
 
-        # get messages from server
-        processNetMessages()
+            # get messages from server
+            processNetMessages()
 
-        if game:
-            currTime = time()
-            if currTime - lastTickTime > 0.1:
-                game.tick()
-                lastTickTime = currTime
-                drawWindow()
-    # end while (main client loop)
-
-    #TODO this is never reached
-    quit()
+            if game:
+                currTime = time()
+                if currTime - lastTickTime > 0.1:
+                    game.tick()
+                    lastTickTime = currTime
+                    drawWindow()
+        # end while (main client loop)
+    except BaseException as e:
+        print_debug(str(e))
+    finally:
+        quit()
 # end start()
 
 def joinLobby():
-    global lobbyAddr
+    global s, lobbyAddr
 
-    s.sendto(pack(STRUCT_FMT_HDR, MessageType.HELLO, calcsize(STRUCT_FMT_HDR)), (HOST, PORT))
-    #print 'Sending HELLO to server.'
-    #TODO print server hostname and address. anything else?
+    SendHelloMessageTo(s, (HOST, PORT))
 
-    #FIXME allow direct connection to lobbies. if response isn't MOTD, it's a lobby
+    motd, srvaddr = ReceiveMOTDFrom(s)
+    print '\nMessage of the Day from server:\n' + motd
 
-    # get MOTD
-    msg, srvaddr = s.recvfrom(calcsize(STRUCT_FMT_HDR) + MAX_MOTD_SIZE)
-    print '\nMessage of the Day from server:'
-    print msg[calcsize(STRUCT_FMT_HDR):] + '\n'
-
-    # get lobby info
-    s.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_REQ, calcsize(STRUCT_FMT_HDR)), (HOST, PORT))
-    msg, srvaddr = s.recvfrom(MAX_MSG_SIZE)
-    lobbyCount = int(unpack(STRUCT_FMT_LOBBY_COUNT, msg[calcsize(STRUCT_FMT_HDR)])[0]) # this is a really ugly statement but int(msg[calcsize(STRUCT_FMT_HDR)]) throws an exception
-    lobbyList = msg[calcsize(STRUCT_FMT_HDR) + calcsize(STRUCT_FMT_LOBBY_COUNT):]
-    print 'There are currently ' + str(lobbyCount) + ' lobbies on this server:'
-    for i in range(0, lobbyCount):
-        lobbyNum, lobbyPort = unpack(STRUCT_FMT_LOBBY, lobbyList[i * calcsize(STRUCT_FMT_LOBBY):i * calcsize(STRUCT_FMT_LOBBY) + calcsize(STRUCT_FMT_LOBBY)])
-        print str(i + 1) + '. Lobby ' + str(lobbyNum) + ' on port ' + str(lobbyPort)
+    SendLobbyListRequestTo(s, (HOST, PORT))
+    lobbyList, srvaddr = ReceiveLobbyListFrom(s)
+    print 'There are currently ' + str(len(lobbyList)) + ' lobbies on this server:'
+    for i in range(0, len(lobbyList)):
+        print str(i + 1) + '. Lobby ' + str(lobbyList[i][0]) + ' on port ' + str(lobbyList[i][1])
 
     selection = int(raw_input('Which lobby would you like to join? '))
     
-    selectedLobby, selectedPort = unpack(STRUCT_FMT_LOBBY, lobbyList[selection * calcsize(STRUCT_FMT_LOBBY):selection * calcsize(STRUCT_FMT_LOBBY) + calcsize(STRUCT_FMT_LOBBY)])    
+    selectedLobby, selectedPort = lobbyList[selection - 1]
     print 'Joining lobby number ' + str(selectedLobby) + '.'
 
-    # try to join lobby
-    s.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_JOIN, calcsize(STRUCT_FMT_HDR)), (HOST, selectedPort))
+    SendLobbyJoinRequestTo(s, (HOST, selectedPort))
 
     #TODO make sure we joined successfully (listen for ACCEPT or REJECT message)
 
-    lobbyAddr = (srvaddr[0], selectedPort)
+    lobbyAddr = (HOST, selectedPort)
 # end joinLobby() 
 
 def startGame():
-    global win
-    global game
+    global win, game
 
-FIXME need IDs list from server
-    game = SnakeGame.SnakeGame(WIN_WIDTH, WIN_HEIGHT, (0, 1)))
+    #FIXME need IDs list from server
+    game = SnakeGame.SnakeGame(WIN_WIDTH, WIN_HEIGHT, (0, 1))
 
     # initiate pygame and pygcurse
     os.environ['SDL_VIDEO_CENTERED'] = '1' # center window in Windows
@@ -187,39 +179,35 @@ def processUserInput():
             elif event.key == K_RIGHT:
                 game.processInput(Dir.Right)
 
-    FIXME  send player input if it changed game state
+    #FIXME  send player input if it changed game state
     sendNetMessages()
 # end processUserInput()
 
 def processNetMessages():
-    # NOTE: I use select because someone on StackOverflow said it's easier than setting non-blocking mode
-    readable, writable, exceptional = select([s], [], [], 0)
+    global s
+
+    address, msgType, msgBody = CheckForMessage(s)
 
     #FIXME this will break the game if the client receives a lot of messages (because it won't handle user input)
-    while readable:
-        #if s in readable:
-        msg, addr = s.recvfrom(MAX_MSG_SIZE)
-
+    while not msgType == MessageType.NONE:
         # only look at it if it's from the server
         if addr == lobbyAddr:
-            msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
-
-            if msgType == INIT_STATE:
-                FIXME
-            elif msgType == START:
+            if msgType == MessageType.INIT_STATE:
+                #FIXME
+                pass
+            elif msgType == MessageType.START:
                 startGame()
             elif msgType == MessageType.SERVER_UPDATE:
-                FIXME
+                #FIXME
+                pass
             elif msgType == MessageType.CLIENT_UPDATE:
                 print 'We got an update from another player.'
-        
-        readable, writable, exceptional = select([s], [], [], 0)
+
+        address, msgType, msgBody = CheckForMessage(self.s)
 # end processNetMessages()
 
 def sendNetMessages():
     if game.gameStateChanged == True:
-        msg = pack(STRUCT_FMT_HDR, MessageType.UPDATE, calcsize(STRUCT_FMT_HDR) + calcsize(STRUCT_FMT_GAME_UPDATE))
-        msg += pack(STRUCT_FMT_GAME_UPDATE, game.tickNum, game.snake1.heading)
-        s.sendto(msg, lobbyAddr)
+        SendGameUpdateTo(s, lobbyAddr, pack(STRUCT_FMT_GAME_UPDATE, game.tickNum, game.snake1.heading))
         game.gameStateChanged = False
 # end sendNetMessages()
