@@ -35,11 +35,10 @@ from pygame.locals import *
 import pygcurse
 
 import SnakeGame
+from SnakeConfig import *
 from SnakeGame import Dir
 from SnakeNet import *
 
-# the network socket to send/receive on #
-s = None
 # the lobby server address #
 lobbyAddr = None
 # list of players that will be active during a game #
@@ -54,21 +53,17 @@ game = None
 win = None
 
 def init():
-    global s
-
-    s = GetSocketForClient()
-# end init()
+    InitClientSocket()
 
 def quit():
-    # send QUIT message to lobby server if we're connected to one
-    if lobbyAddr:
-        SendQuitMessageTo(s, lobbyAddr)
+    global lobbyAddr
 
-    s.close()
+    SendQuitMessageTo(lobbyAddr)
+
+    CloseSocket()
 
     pygame.quit()
     sys.exit()
-# end quit()
 
 def start():
     global game
@@ -80,10 +75,8 @@ def start():
         # main game loop
         while True:
             if game:
-                # check user input
-                propertyserInput()
+                processUserInput()
 
-            # get messages from server
             processNetMessages()
 
             if game:
@@ -94,36 +87,34 @@ def start():
                     drawWindow()
         # end while (main client loop)
     except BaseException as e:
-        print_debug(str(e))
+        print_err('SnakeClient', str(e))
     finally:
         quit()
-# end start()
 
 def joinLobby():
-    global s, lobbyAddr
+    global lobbyAddr
 
-    SendHelloMessageTo(s, (HOST, PORT))
+    SendHelloMessage()
 
-    motd, srvaddr = ReceiveMOTDFrom(s)
-    print '\nMessage of the Day from server:\n' + motd
+    motd = ReceiveMOTD()
+    print '\nMessage of the Day from ' + HOST + ':\n' + motd
 
-    SendLobbyListRequestTo(s, (HOST, PORT))
-    lobbyList, srvaddr = ReceiveLobbyListFrom(s)
+    SendLobbyListRequest()
+    lobbyList = ReceiveLobbyList()
     print 'There are currently ' + str(len(lobbyList)) + ' lobbies on this server:'
-    for i in range(0, len(lobbyList)):
+    for i in range(len(lobbyList)):
         print str(i + 1) + '. Lobby ' + str(lobbyList[i][0]) + ' on port ' + str(lobbyList[i][1])
 
     selection = int(raw_input('Which lobby would you like to join? '))
-    
+
     selectedLobby, selectedPort = lobbyList[selection - 1]
     print 'Joining lobby number ' + str(selectedLobby) + '.'
 
-    SendLobbyJoinRequestTo(s, (HOST, selectedPort))
+    SendLobbyJoinRequestTo((HOST, selectedPort))
 
     #TODO make sure we joined successfully (listen for ACCEPT or REJECT message)
 
     lobbyAddr = (HOST, selectedPort)
-# end joinLobby() 
 
 def startGame():
     global win, game
@@ -138,9 +129,10 @@ def startGame():
     win.autoupdate = False # turn off autoupdate so window doesn't flicker
 
     drawWindow()
-# end startGame()
 
 def drawWindow():
+    global win, game
+
     # clear the screen
     #win.erase() # this would be used instead but for a bug...
     win.fill(' ')
@@ -162,7 +154,6 @@ def drawWindow():
 
     # actually paint the window
     win.update()
-# end drawWindow()
 
 def processUserInput():
     # process input queue
@@ -181,12 +172,9 @@ def processUserInput():
 
     #FIXME  send player input if it changed game state
     sendNetMessages()
-# end processUserInput()
 
 def processNetMessages():
-    global s
-
-    address, msgType, msgBody = CheckForMessage(s)
+    address, msgType, msgBody = CheckForMessage()
 
     #FIXME this will break the game if the client receives a lot of messages (because it won't handle user input)
     while not msgType == MessageType.NONE:
@@ -203,11 +191,9 @@ def processNetMessages():
             elif msgType == MessageType.CLIENT_UPDATE:
                 print 'We got an update from another player.'
 
-        address, msgType, msgBody = CheckForMessage(self.s)
-# end processNetMessages()
+        address, msgType, msgBody = CheckForMessage()
 
 def sendNetMessages():
     if game.gameStateChanged == True:
-        SendGameUpdateTo(s, lobbyAddr, pack(STRUCT_FMT_GAME_UPDATE, game.tickNum, game.snake1.heading))
+        SendGameUpdateTo(lobbyAddr, pack(STRUCT_FMT_GAME_UPDATE, game.tickNum, game.snake1.heading))
         game.gameStateChanged = False
-# end sendNetMessages()

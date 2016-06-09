@@ -31,18 +31,14 @@ from struct import unpack
 from struct import calcsize
 
 import SnakeGame
+
+from SnakeConfig import *
 from SnakeNet import *
-
-NUM_LOBBIES = 1
-
-MAX_LOBBY_SIZE = 8
 
 class LobbyServer:
     def __init__(self, lobbyNum):
         # unique server ID #
         self.lobbyNum = lobbyNum
-        # the port to listen on #
-        self.connectPort = PORT + self.lobbyNum
 
         # activePlayers maps net addresses to tuples of (X, Y) where:
         #   X: ready status (0 for not ready, 1 for ready)
@@ -54,7 +50,7 @@ class LobbyServer:
         self.game = None
 
         # open a socket and wait for clients
-        self.s = GetSocketForLobbyServer(self.connectPort)
+        self.connectPort = InitLobbyServerSocket()
     # end __init__()
 
     # lobby server thread runs here
@@ -82,37 +78,37 @@ class LobbyServer:
                         lastTickTime = currTime
             # end while (main server loop)
         except BaseException as e:
-            print_debug( "Error: " + str(e) )
+            print_err('LobbyServer', str(self.lobbyNum) + ': ' + str(e))
         finally:
-            self.s.close()
+            CloseSocket()
     # end start()
 
-    def startGame(self):
+    def Game(self):
         self.game = SnakeGame.SnakeGame(WIN_WIDTH, WIN_HEIGHT, self.activePlayers.keys())
 
         for addr, playerTuple in self.activePlayers:
-            SendSetupMessage(self.s)
+            SendSetupMessage(addr)
 
         for addr, playerTuple in self.activePlayers:
-            SendStartMessage(self.s)
+            SendStartMessage(addr)
         for addr in self.spectatingPlayers:
-            SendStartMessage(self.s)
+            SendStartMessage(addr)
     # end startGame()
 
     def processNetMessages(self):
-        address, msgType, msgBody = CheckForMessage(self.s)
+        address, msgType, msgBody = CheckForMessage()
 
         #FIXME this will break the game if the server receives a lot of messages, because it's busy handling those
         #      instead of ticking the game
         while not msgType == MessageType.NONE:
             if msgType == MessageType.HELLO:
-                SendHelloMessageTo(s, address)
+                SendHelloMessageTo(address)
             elif msgType == MessageType.LOBBY_JOIN:
                 #FIXME send accept or reject message to join request
 
                 #FIXME if the client is already in a list, clearly they were dropped. i need to handle that case
                 if address not in self.activePlayers and address not in self.spectatingPlayers and (len(self.activePlayers) + len(self.spectatingPlayers) < MAX_LOBBY_SIZE):
-                    print_debug('Woohoo! We got a new client!')
+                    print_debug('LobbyServer', 'Woohoo! We got a new client!')
                     #TODO tell other clients we have another player 
                     #FIXME add to spectating players list instead
                     #self.spectatingPlayers[address] = ()
@@ -156,16 +152,16 @@ class LobbyServer:
                 # process update from client; change server state if valid; echo to other clients
                 clientTickNum, newSnakeDir = unpack(STRUCT_FMT_GAME_UPDATE, msg[calcsize(STRUCT_FMT_HDR):])
                 #TODO validate client input (check tick num--it shouldn't be off server tick num by more than 1 and if it is off, send server state)
-                print_debug('Tick num: ' + str(clientTickNum) + ', New snake direction: ' + str(newSnakeDir))
+                print_debug('LobbyServer', 'Tick num: ' + str(clientTickNum) + ', New snake direction: ' + str(newSnakeDir))
                 for addr in self.activePlayers:
                     # don't echo UPDATE to player that just sent it
                     #TODO use better variable names
                     if addr != address:
-                        s.sendto(msg, addr)
+                        sock.sendto(msg, addr)
 #           elif msgType == MessageType.CHAT:
 #               pass
 
-            address, msgType, msgBody = CheckForMessage(self.s)
+            address, msgType, msgBody = CheckForMessage()
         # end while (net message queue is empty)
     # end processNetMessages()
 # end class LobbyServer
@@ -181,31 +177,30 @@ class MainServer:
             lobbies.append(lobby)
             pid = os.fork()
             if pid == 0:
-                lobbies = ()
+                lobbies = None
                 lobby.start()
                 sys.exit(0) # end lobby process if it ever exits
 
-        print_debug(str(len(lobbies)) + ' lobbies started.')
+        print_debug('MainServer', str(len(lobbies)) + ' lobbies started.')
 
-        s = GetSocketForMainServer()
+        InitMainServerSocket()
 
-        print 'Main server has started on port ' + str(PORT) + '. Waiting for clients...'
+        print 'Main server has started on port ' + str(SERVER_PORT) + '. Waiting for clients...'
 
         try:
             while True:
-                address, msgType = WaitForClient(s)
+                address, msgType = WaitForClient()
 
-                # fork and respond
-                pid = os.fork()
-                if pid == 0:
-                    if msgType == MessageType.HELLO:
-                        SendMOTDTo(s, address)
-                    elif msgType == MessageType.LOBBY_REQ:
-                        SendLobbyListTo(s, address, lobbies)
-
-                    #TODO do i really close() from the child process?
-                    s.close()
-                    sys.exit(0)
+                if msgType == MessageType.HELLO:
+                    SendMOTDTo(address)
+                elif msgType == MessageType.LOBBY_REQ:
+                    SendLobbyListTo(address, lobbies)
+        except BaseException as e:
+            print_err('MainServer', str(e))
         finally:
-            s.close()
+            CloseSocket()
+            sys.exit(1)
+
+        CloseSocket()
+        sys.exit(0)
 # end class MainServer

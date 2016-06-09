@@ -21,16 +21,29 @@
 #  
 # *************************************************************************
 
-import sys
+################ CLIENT CONFIG VARS ################
 
-PRINT_DEBUG = True
-PRINT_ERROR = True
+# which server to connect to
+HOST = '127.0.0.1'
 
-def print_debug(name, msg):
-    if PRINT_DEBUG:
-        print 'DEBUG: ' + str(name) + ': ' + str(msg)
 
-def print_err(name, msg):
-    if PRINT_ERROR:
-        print 'ERROR: ' + str(name) + ' (line ' + str(sys.exc_info()[-1].tb_lineno) + '): ' + str(msg)
+################ SERVER CONFIG VARS ################
+
+# the port the server binds to
+SERVER_PORT = 11845
+
+# welcome message for new clients
+MOTD = 'Welcome to my Snake-M development server!'
+
+# number of lobby servers to spawn
+NUM_LOBBIES = 1
+
+# total clients allowed in a lobby
+MAX_LOBBY_SIZE = 8
+
+
+########## (SERVER ONLY) GAME CONFIG VARS ##########
+
+# game window dimensions (units are text cells)
+WIN_WIDTH, WIN_HEIGHT = 60, 35
 

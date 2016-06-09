@@ -24,17 +24,12 @@
 import socket
 
 from select import select
-
 from struct import pack
 from struct import unpack
 from struct import calcsize
 
+from SnakeConfig import *
 from SnakeDebug import *
-
-MOTD = 'Welcome to my Snake-M development server!'
-
-HOST = 'localhost'
-PORT = 11845
 
 MAX_MSG_SIZE = 1024
 
@@ -56,100 +51,126 @@ STRUCT_FMT_LOBBY = '!BH'
 # B: new heading of player's snake
 STRUCT_FMT_GAME_UPDATE = '!IB'
 
+sock = None
+
 class MessageType:
     """Enum for Snake network messages"""
     NONE, HELLO, MOTD, LOBBY_REQ, LOBBY_REP, LOBBY_JOIN, LOBBY_QUIT, READY, NOT_READY, START, UPDATE, CHAT, SETUP = range(13)
 
-def SendMOTDTo(socket, address):
+def SendMOTDTo(address):
     buf = pack(STRUCT_FMT_HDR, MessageType.MOTD, calcsize(STRUCT_FMT_HDR) + len(MOTD))
     buf += MOTD
 
-    print_debug('Sending MOTD to ' + address[0] + '.')
+    print_debug('SnakeNet', 'Sending MOTD to ' + address[0] + '.')
 
-    socket.sendto(buf, address)
+    sock.sendto(buf, address)
 
-def SendLobbyListTo(socket, address, lobbies):
+def SendLobbyListTo(address, lobbies):
     buf = pack(STRUCT_FMT_HDR, MessageType.LOBBY_REP, calcsize(STRUCT_FMT_HDR) + calcsize(STRUCT_FMT_LOBBY_COUNT) + calcsize(STRUCT_FMT_LOBBY) * len(lobbies))
     buf += pack(STRUCT_FMT_LOBBY_COUNT, len(lobbies))
     for lobby in lobbies:
         buf += pack(STRUCT_FMT_LOBBY, lobby.lobbyNum, lobby.connectPort)
 
-    print_debug(str(len(lobbies)) + ' lobbies sent to ' + address[0] + '.')
+    print_debug('SnakeNet', str(len(lobbies)) + ' lobbies sent to ' + address[0] + '.')
 
-    socket.sendto(buf, address)
+    sock.sendto(buf, address)
 
-def SendSetupMessage(socket):
-    socket.send(pack(STRUCT_FMT_HDR, MessageType.SETUP, calcsize(STRUCT_FMT_HDR)))
+def SendSetupMessage():
+    sock.send(pack(STRUCT_FMT_HDR, MessageType.SETUP, calcsize(STRUCT_FMT_HDR)))
 
-def SendStartMessage(socket):
-    socket.send(pack(STRUCT_FMT_HDR, MessageType.START, calcsize(STRUCT_FMT_HDR)))
+def SendStartMessage():
+    sock.send(pack(STRUCT_FMT_HDR, MessageType.START, calcsize(STRUCT_FMT_HDR)))
 
-def SendHelloMessageTo(socket, address):
-    print_debug('Sending HELLO to ' + address[0] + '.')
-    socket.sendto(pack(STRUCT_FMT_HDR, MessageType.HELLO, calcsize(STRUCT_FMT_HDR)), address)
+def SendHelloMessage():
+    print_debug('SnakeNet', 'Sending HELLO to ' + HOST + '.')
+    sock.sendto(pack(STRUCT_FMT_HDR, MessageType.HELLO, calcsize(STRUCT_FMT_HDR)), (HOST, SERVER_PORT))
 
-def SendQuitMessageTo(socket, address):
-    socket.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_QUIT, calcsize(STRUCT_FMT_HDR)), address)
+def SendQuitMessageTo(address):
+    if address:
+        sock.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_QUIT, calcsize(STRUCT_FMT_HDR)), address)
 
-def ReceiveMOTDFrom(socket):
-    msg, srvaddr = socket.recvfrom(calcsize(STRUCT_FMT_HDR) + MAX_MSG_SIZE)
-    return msg[calcsize(STRUCT_FMT_HDR):], srvaddr
+def ReceiveMOTD():
+    msg, srvaddr = sock.recvfrom(calcsize(STRUCT_FMT_HDR) + MAX_MSG_SIZE)
+    if IsServer(srvaddr):
+        return msg[calcsize(STRUCT_FMT_HDR):]
+    else:
+        print_debug('SnakeNet', 'Ignoring message from unexpected sender.')
+        return None
 
-def SendLobbyListRequestTo(socket, address):
-    socket.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_REQ, calcsize(STRUCT_FMT_HDR)), address)
+def IsServer(addr):
+    return addr[0] == HOST and addr[1] == SERVER_PORT
 
-def ReceiveLobbyListFrom(socket):
-    msg, srvaddr = socket.recvfrom(MAX_MSG_SIZE)
-    lobbyCount = int(unpack(STRUCT_FMT_LOBBY_COUNT, msg[calcsize(STRUCT_FMT_HDR)])[0]) # this is a really ugly statement but int(msg[calcsize(STRUCT_FMT_HDR)]) throws an exception
-    lobbyList = msg[calcsize(STRUCT_FMT_HDR) + calcsize(STRUCT_FMT_LOBBY_COUNT):]
+def SendLobbyListRequest():
+    sock.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_REQ, calcsize(STRUCT_FMT_HDR)), (HOST, SERVER_PORT))
 
-    print_debug(str(lobbyCount) + ' lobbies received from ' + srvaddr[0] + '.')
+def ReceiveLobbyList():
+    msg, srvaddr = sock.recvfrom(MAX_MSG_SIZE)
+    if IsServer(srvaddr):
+        lobbyCount = int(unpack(STRUCT_FMT_LOBBY_COUNT, msg[calcsize(STRUCT_FMT_HDR)])[0]) # this is a really ugly statement but int(msg[calcsize(STRUCT_FMT_HDR)]) throws an exception
+        lobbyList = msg[calcsize(STRUCT_FMT_HDR) + calcsize(STRUCT_FMT_LOBBY_COUNT):]
 
-    toReturn = []
-    for i in range(0, lobbyCount):
-        lobbyNum, lobbyPort = unpack(STRUCT_FMT_LOBBY, lobbyList[i * calcsize(STRUCT_FMT_LOBBY):i * calcsize(STRUCT_FMT_LOBBY) + calcsize(STRUCT_FMT_LOBBY)])
-        toReturn.append((lobbyNum, lobbyPort))
-    return toReturn, srvaddr
+        print_debug('SnakeNet', str(lobbyCount) + ' lobbies received from ' + srvaddr[0] + '.')
 
-def SendLobbyJoinRequestTo(socket, address):
-    socket.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_JOIN, calcsize(STRUCT_FMT_HDR)), address)
+        toReturn = []
+        for i in range(lobbyCount):
+            lobbyNum, lobbyPort = unpack(STRUCT_FMT_LOBBY, lobbyList[i * calcsize(STRUCT_FMT_LOBBY):i * calcsize(STRUCT_FMT_LOBBY) + calcsize(STRUCT_FMT_LOBBY)])
+            toReturn.append((lobbyNum, lobbyPort))
+        return toReturn
+    else:
+        print_debug('SnakeNet', 'Ignoring message from unexpected sender.')
+        return None
 
-def SendGameUpdateTo(socket, address, packedUpdate):
+def SendLobbyJoinRequestTo(address):
+    sock.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_JOIN, calcsize(STRUCT_FMT_HDR)), address)
+
+def SendGameUpdateTo(address, packedUpdate):
     msg = pack(STRUCT_FMT_HDR, MessageType.UPDATE, calcsize(STRUCT_FMT_HDR) + calcsize(STRUCT_FMT_GAME_UPDATE))
     msg += packedUpdate
-    socket.sendto(msg, address)
+    sock.sendto(msg, address)
 
-def WaitForClient(socket):
-    msg, address = socket.recvfrom(MAX_MSG_SIZE)
+def WaitForClient():
+    msg, address = sock.recvfrom(MAX_MSG_SIZE)
     #FIXME we get an exception if the input isn't of the expected size, so we need to check msg length
     msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
     return address, msgType
 
-def GetSocketForMainServer():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.bind((HOST, PORT))
-    return s
+def InitMainServerSocket():
+    global sock
 
-def GetSocketForLobbyServer(port):
-    # open a socket and wait for clients
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.bind((HOST, port))
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind(('localhost', SERVER_PORT))
 
-    # NOTE: we need the socket to be non-blocking since we try to flush the whole net message queue when select says it's ready
-    s.setblocking(0)
-    return s
+    print_debug('SnakeNet', 'Initializing server socket on port ' + str(sock.getsockname()[1]) + '.')
 
-def GetSocketForClient():
-    return socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+def InitLobbyServerSocket():
+    global sock
 
-def CheckForMessage(socket):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind(('localhost', 0)) # random port
+    sock.setblocking(0) # non-blocking
+
+    print_debug('SnakeNet', 'Initializing server socket on port ' + str(sock.getsockname()[1]) + '.')
+
+    return sock.getsockname()[1]
+
+def InitClientSocket():
+    global sock
+
+    print_debug('SnakeNet', 'Initializing client socket.')
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+def CloseSocket():
+    sock.close()
+
+def CheckForMessage():
     # NOTE: We want select() to timeout in order to see if the game needs to tick.
     #       We use select() simply so we don't have to do our own timeout.
-    readable, writable, exceptional = select([socket], [], [], 0.005)
+    readable, writable, exceptional = select([sock], [], [], 0.005)
 
-    if socket in readable:
+    if sock in readable:
         # NOTE: it's possible for the socket to not actually be ready, like in the case of a checksum error
-        msg, address = socket.recvfrom(MAX_MSG_SIZE)
+        msg, address = sock.recvfrom(MAX_MSG_SIZE)
         msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
         #FIXME return message body
         return address, msgType, None
