@@ -37,7 +37,7 @@ class Pellet:
         be added in the future like power-up abilities."""
 
         def __init__(self, stdscr_x, stdscr_y, fgcolor = 'red', bgcolor = 'black'):
-                
+
                 """On creation, randomly set a position using the
                 given arguments as maximum values."""
 
@@ -72,7 +72,7 @@ class Snake:
                 self.body = deque([(headX - 3, headY), (headX - 2, headY), (headX - 1, headY),(headX, headY)])
                 #self.body = deque([(headX, headY), (headX - 1, headY), (headX - 2, headY),(headX - 3, headY)])
                 self.shouldGrow = False
-                
+
         def grow(self):
 
                 """Grow the Snake one segment longer.
@@ -83,7 +83,7 @@ class Snake:
                 # this just sets a flag so that on the next move(),
                 # the last body segment won't be popped off
                 self.shouldGrow = True
-                
+
         def move(self, p):
 
                 """Move (update) the snake's body.
