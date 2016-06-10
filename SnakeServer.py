@@ -21,7 +21,6 @@
 #  
 # *************************************************************************
 
-import time
 import os
 import sys
 
@@ -104,28 +103,19 @@ class LobbyServer:
             if msgType == MessageType.HELLO:
                 SendHelloMessageTo(address)
             elif msgType == MessageType.LOBBY_JOIN:
-                #FIXME send accept or reject message to join request
-
-                #FIXME if the client is already in a list, clearly they were dropped. i need to handle that case
-                if address not in self.activePlayers and address not in self.spectatingPlayers and (len(self.activePlayers) + len(self.spectatingPlayers) < MAX_LOBBY_SIZE):
+                if address in self.activePlayers or address in self.spectatingPlayers or (len(self.activePlayers) + len(self.spectatingPlayers) < MAX_LOBBY_SIZE):
                     print_debug('LobbyServer', 'Woohoo! We got a new client!')
-                    #TODO tell other clients we have another player 
-                    #FIXME add to spectating players list instead
-                    #self.spectatingPlayers[address] = ()
-                    self.activePlayers[address] = (1, None)
-
-                    #FIXME move to READY message. this is just a shortcut for now
-                    if len(self.activePlayers) == 2:
-                        self.startGame()
-                        lastTickTime = time()
-#           elif msgType == MessageType.LOBBY_QUIT:
-#               if address in self.activePlayers:
-#                   #TODO do something special if game is running
-#                   del self.activePlayers[address]
-#                   #TODO tell other clients we lost a player 
-#               elif address in self.spectatingPlayers:
-#                   del self.spectatingPlayers[address]
-#                   #TODO tell other clients we lost a player 
+                    SendLobbyJoinRequestTo(address) # LOBBY_JOIN is used for join confirmation
+                    self.spectatingPlayers[address] = None
+                else:
+                    SendQuitMessageTo(address) # LOBBY_QUIT is used for join rejection
+            elif msgType == MessageType.LOBBY_QUIT:
+                if address in self.activePlayers:
+                    print_debug('LobbyServer', 'Active player is quitting.')
+                    del self.activePlayers[address]
+                elif address in self.spectatingPlayers:
+                    print_debug('LobbyServer', 'Spectating player is quitting.')
+                    del self.spectatingPlayers[address]
 #           elif msgType == MessageType.READY:
 #               if address in self.activePlayers:
 #                   self.activePlayers[address][0] = 1

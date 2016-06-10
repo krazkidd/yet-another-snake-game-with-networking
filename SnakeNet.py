@@ -75,50 +75,35 @@ def SendLobbyListTo(address, lobbies):
 
     sock.sendto(buf, address)
 
-def SendSetupMessage():
-    sock.send(pack(STRUCT_FMT_HDR, MessageType.SETUP, calcsize(STRUCT_FMT_HDR)))
+def UnpackLobbyList(msgBody):
+    lobbyCount = int(unpack(STRUCT_FMT_LOBBY_COUNT, msgBody[calcsize(STRUCT_FMT_LOBBY_COUNT)])[0])
+    packedLobbies = msgBody[calcsize(STRUCT_FMT_LOBBY_COUNT):]
 
-def SendStartMessage():
-    sock.send(pack(STRUCT_FMT_HDR, MessageType.START, calcsize(STRUCT_FMT_HDR)))
+    lobbyList = []
+    for i in range(lobbyCount):
+        lobbyNum, lobbyPort = unpack(STRUCT_FMT_LOBBY, packedLobbies[i * calcsize(STRUCT_FMT_LOBBY):i * calcsize(STRUCT_FMT_LOBBY) + calcsize(STRUCT_FMT_LOBBY)])
+        lobbyList.append((lobbyNum, lobbyPort))
+
+    return lobbyList
+
+def SendSetupMessage(address):
+    sock.sendto(address, pack(STRUCT_FMT_HDR, MessageType.SETUP, calcsize(STRUCT_FMT_HDR)))
+
+def SendStartMessage(address):
+    sock.sendto(address, pack(STRUCT_FMT_HDR, MessageType.START, calcsize(STRUCT_FMT_HDR)))
 
 def SendHelloMessage():
     print_debug('SnakeNet', 'Sending HELLO to ' + HOST + '.')
     sock.sendto(pack(STRUCT_FMT_HDR, MessageType.HELLO, calcsize(STRUCT_FMT_HDR)), (HOST, SERVER_PORT))
 
 def SendQuitMessageTo(address):
-    if address:
-        sock.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_QUIT, calcsize(STRUCT_FMT_HDR)), address)
-
-def ReceiveMOTD():
-    msg, srvaddr = sock.recvfrom(calcsize(STRUCT_FMT_HDR) + MAX_MSG_SIZE)
-    if IsServer(srvaddr):
-        return msg[calcsize(STRUCT_FMT_HDR):]
-    else:
-        print_debug('SnakeNet', 'Ignoring message from unexpected sender.')
-        return None
+    sock.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_QUIT, calcsize(STRUCT_FMT_HDR)), address)
 
 def IsServer(addr):
     return addr[0] == HOST and addr[1] == SERVER_PORT
 
 def SendLobbyListRequest():
     sock.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_REQ, calcsize(STRUCT_FMT_HDR)), (HOST, SERVER_PORT))
-
-def ReceiveLobbyList():
-    msg, srvaddr = sock.recvfrom(MAX_MSG_SIZE)
-    if IsServer(srvaddr):
-        lobbyCount = int(unpack(STRUCT_FMT_LOBBY_COUNT, msg[calcsize(STRUCT_FMT_HDR)])[0]) # this is a really ugly statement but int(msg[calcsize(STRUCT_FMT_HDR)]) throws an exception
-        lobbyList = msg[calcsize(STRUCT_FMT_HDR) + calcsize(STRUCT_FMT_LOBBY_COUNT):]
-
-        print_debug('SnakeNet', str(lobbyCount) + ' lobbies received from ' + srvaddr[0] + '.')
-
-        toReturn = []
-        for i in range(lobbyCount):
-            lobbyNum, lobbyPort = unpack(STRUCT_FMT_LOBBY, lobbyList[i * calcsize(STRUCT_FMT_LOBBY):i * calcsize(STRUCT_FMT_LOBBY) + calcsize(STRUCT_FMT_LOBBY)])
-            toReturn.append((lobbyNum, lobbyPort))
-        return toReturn
-    else:
-        print_debug('SnakeNet', 'Ignoring message from unexpected sender.')
-        return None
 
 def SendLobbyJoinRequestTo(address):
     sock.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_JOIN, calcsize(STRUCT_FMT_HDR)), address)
@@ -146,8 +131,8 @@ def InitLobbyServerSocket():
     global sock
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind(('localhost', 0)) # random port
-    sock.setblocking(0) # non-blocking
+    sock.bind(('localhost', 0)) # 0 = random port
+    sock.setblocking(0) # 0 = non-blocking
 
     print_debug('SnakeNet', 'Initializing server socket on port ' + str(sock.getsockname()[1]) + '.')
 
@@ -164,15 +149,12 @@ def CloseSocket():
     sock.close()
 
 def CheckForMessage():
-    # NOTE: We want select() to timeout in order to see if the game needs to tick.
-    #       We use select() simply so we don't have to do our own timeout.
+    # NOTE: We use select() simply so we don't have to do our own timeout on the socket.
     readable, writable, exceptional = select([sock], [], [], 0.005)
 
     if sock in readable:
-        # NOTE: it's possible for the socket to not actually be ready, like in the case of a checksum error
         msg, address = sock.recvfrom(MAX_MSG_SIZE)
         msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
-        #FIXME return message body
-        return address, msgType, None
+        return address, msgType, msg[calcsize(STRUCT_FMT_HDR):]
     else:
         return None, MessageType.NONE, None

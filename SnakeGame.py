@@ -21,7 +21,12 @@
 #  
 # *************************************************************************
 
-from pygame import event
+import os
+from time import time
+
+import pygame
+from pygame.locals import * # keyboard keys and stuff
+import pygcurse
 
 from Snake import *
 
@@ -34,24 +39,55 @@ class SnakeGame:
         self.boardWidth = boardWidth
         self.boardHeight = boardHeight
 
-        # instantiate players' snakes
+        self.win = None
+        
         snake1 = Snake(15, 15, Dir.Right, 4)
-        snake2 = SnakeAI(30, 30, Dir.Right, 4)
         #TODO if playersList is less than size of game, add robot players (to playersList, so the zip() works)
-        #snakeAI = SnakeAI(30, 30, Dir.Right, 4)
-        self.snakes = zip(playersList, (snake1, snake2))
 
-        self.pellet = Pellet(boardWidth - 1, boardHeight - 1, 'yellow') 
+        self.snakes = zip(playersList, (snake1))
+
+        self.pellet = Pellet(self.boardWidth - 1, self.boardHeight - 1, 'yellow') 
 
         self.gameStateChanged = False
         self.tickNum = 0
     # end __init__()
 
-    def processInput(self, direction):
-#FIXME
-        if self.snake1.changeHeading(direction):
-            self.gameStateChanged = True
-    # end processInput()
+def startGame(self):    
+    # initiate pygame and pygcurse
+    os.environ['SDL_VIDEO_CENTERED'] = '1' # center window in Windows
+    pygame.init()
+    self.win = pygcurse.PygcurseWindow(WIN_WIDTH, WIN_HEIGHT, 'Snake')
+    self.win.autoupdate = False # turn off autoupdate so window doesn't flicker
+
+    drawWindow()
+
+def drawWindow(self):
+    global win
+
+    # clear the screen
+    #win.erase() # this would be used instead but for a bug...
+    self.win.fill(' ')
+
+    # draw outside border
+    #TODO
+
+    # draw game data
+    self.win.putchars("Player 1 score: " + str(game.snakes[0].length), 0, 0)
+    self.win.putchars("Player 2 score: " + str(game.snakes[1].length), 30, 0)
+
+    for snake in self.snakes:
+        for pos in snake:
+            # pos is a tuple (x, y)
+            self.win.putchars('O', pos[0], pos[1], fgcolor = snake.fgcolor)
+
+    # draw pellet
+    self.win.putchar('+', game.pellet.posx, game.pellet.posy, game.pellet.fgcolor)
+
+    # actually paint the window
+    self.win.update()
+
+def quit():
+    pygame.quit()
 
 #FIXME return game condition (running or game over) or report it via member variable
     def tick(self):
@@ -82,4 +118,26 @@ class SnakeGame:
 
         self.tickNum += 1
     # end tick()
-# end class SnakeGame
+
+def processUserInput(self):
+    # process input queue
+    for event in pygame.event.get():
+        if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
+            quit()
+        elif event.type == KEYDOWN:
+            if event.key == K_UP:
+                self.snake1.changeHeading(Dir.Up)
+            elif event.key == K_DOWN:
+                self.snake1.changeHeading(Dir.Down)
+            elif event.key == K_LEFT:
+                self.snake1.changeHeading(Dir.Left)
+            elif event.key == K_RIGHT:
+                self.snake1.changeHeading(Dir.Right)
+
+    #FIXME  send player input if it changed game state
+    self.sendNetMessages()
+
+def sendNetMessages(self):
+    if self.game.gameStateChanged == True:
+        SendGameUpdateTo(lobbyAddr, pack(STRUCT_FMT_GAME_UPDATE, game.tickNum, game.snake1.heading))
+        self.game.gameStateChanged = False
