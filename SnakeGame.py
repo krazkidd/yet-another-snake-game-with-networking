@@ -25,10 +25,10 @@ import os
 from time import time
 
 import pygame
-from pygame.locals import * # keyboard keys and stuff
 import pygcurse
+from pygame.locals import * # keyboard keys and stuff
 
-from Snake import *
+import Snake
 
 class GameState:
     """Enum for Snake game state"""
@@ -40,19 +40,19 @@ class SnakeGame:
         self.boardHeight = boardHeight
 
         self.win = None
-        
-        snake1 = Snake(15, 15, Dir.Right, 4)
+
+        snake1 = Snake.Snake(15, 15, Dir.Right, 4)
         #TODO if playersList is less than size of game, add robot players (to playersList, so the zip() works)
 
         self.snakes = zip(playersList, (snake1))
 
-        self.pellet = Pellet(self.boardWidth - 1, self.boardHeight - 1, 'yellow') 
+        self.pellet = Snake.Pellet(self.boardWidth - 1, self.boardHeight - 1, 'yellow')
 
         self.gameStateChanged = False
         self.tickNum = 0
     # end __init__()
 
-def startGame(self):    
+def startGame(self):
     # initiate pygame and pygcurse
     os.environ['SDL_VIDEO_CENTERED'] = '1' # center window in Windows
     pygame.init()

@@ -22,7 +22,7 @@
 # *************************************************************************
 
 import socket
-
+import sys
 from select import select
 from struct import pack
 from struct import unpack
@@ -97,12 +97,14 @@ def SendHelloMessage():
     sock.sendto(pack(STRUCT_FMT_HDR, MessageType.HELLO, calcsize(STRUCT_FMT_HDR)), (HOST, SERVER_PORT))
 
 def SendQuitMessageTo(address):
+    print_debug('SnakeNet', 'Sending QUIT message.')
     sock.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_QUIT, calcsize(STRUCT_FMT_HDR)), address)
 
-def IsServer(addr):
-    return addr[0] == HOST and addr[1] == SERVER_PORT
+def IsServer(address):
+    return address[0] == HOST and address[1] == SERVER_PORT
 
 def SendLobbyListRequest():
+    print_debug('SnakeNet', 'Sending LOBBY_REQ message.')
     sock.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_REQ, calcsize(STRUCT_FMT_HDR)), (HOST, SERVER_PORT))
 
 def SendLobbyJoinRequestTo(address):
@@ -158,3 +160,8 @@ def CheckForMessage():
         return address, msgType, msg[calcsize(STRUCT_FMT_HDR):]
     else:
         return None, MessageType.NONE, None
+
+def UnpackMessage():
+    msg, address = sock.recvfrom(MAX_MSG_SIZE)
+    msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
+    return address, msgType, msg[calcsize(STRUCT_FMT_HDR):]
