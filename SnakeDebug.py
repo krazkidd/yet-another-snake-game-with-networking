@@ -21,6 +21,7 @@
 #  
 # *************************************************************************
 
+import datetime
 import sys
 
 PRINT_DEBUG = True
@@ -28,9 +29,9 @@ PRINT_ERROR = True
 
 def print_debug(name, msg):
     if PRINT_DEBUG:
-        print 'DEBUG: ' + str(name) + ': ' + str(msg)
+        print 'DEBUG (' + datetime.datetime.now().strftime("%H:%M:%S") + ') ' + str(name) + ': ' + str(msg)
 
 def print_err(name, msg):
     if PRINT_ERROR:
-        print 'ERROR: ' + str(name) + ' (line ' + str(sys.exc_info()[-1].tb_lineno) + '): ' + str(msg)
+        print 'ERROR (' + datetime.datetime.now().strftime("%H:%M:%S") + ') ' + str(name) + ' (line ' + str(sys.exc_info()[-1].tb_lineno) + '): ' + str(msg)
 
