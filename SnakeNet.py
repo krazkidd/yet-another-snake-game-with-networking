@@ -93,7 +93,6 @@ def SendStartMessage(address):
     sock.sendto(address, pack(STRUCT_FMT_HDR, MessageType.START, calcsize(STRUCT_FMT_HDR)))
 
 def SendHelloMessage():
-    print_debug('SnakeNet', 'Sending HELLO to ' + HOST + '.')
     sock.sendto(pack(STRUCT_FMT_HDR, MessageType.HELLO, calcsize(STRUCT_FMT_HDR)), (HOST, SERVER_PORT))
 
 def SendQuitMessageTo(address):
@@ -104,7 +103,6 @@ def IsServer(address):
     return address[0] == HOST and address[1] == SERVER_PORT
 
 def SendLobbyListRequest():
-    print_debug('SnakeNet', 'Sending LOBBY_REQ message.')
     sock.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_REQ, calcsize(STRUCT_FMT_HDR)), (HOST, SERVER_PORT))
 
 def SendLobbyJoinRequestTo(address):
@@ -142,13 +140,11 @@ def InitLobbyServerSocket():
 
 def InitClientSocket():
     global sock
-
-    print_debug('SnakeNet', 'Initializing client socket.')
-
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 def CloseSocket():
-    sock.close()
+    if sock:
+        sock.close()
 
 def CheckForMessage():
     # NOTE: We use select() simply so we don't have to do our own timeout on the socket.

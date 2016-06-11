@@ -21,9 +21,11 @@
 #  
 # *************************************************************************
 
+import curses
 import select
 import sys
 
+import SnakeCurses
 import SnakeGame
 import SnakeNet
 from SnakeConfig import *
@@ -37,11 +39,12 @@ game = None
 
 def start():
     SnakeNet.InitClientSocket()
+    SnakeCurses.InitClientWindow(startWithCurses)
+
+def startWithCurses():
     SnakeNet.SendHelloMessage()
     SnakeNet.SendLobbyListRequest()
-    waitForMessageOrInput()
 
-def waitForMessageOrInput():
     while True:
         readable, writable, exceptional = select.select([SnakeNet.sock, sys.stdin], [], [])
 
@@ -50,18 +53,29 @@ def waitForMessageOrInput():
         elif sys.stdin in readable:
             handleInput()
 
+def quit():
+    if lobbyAddr:
+        SnakeNet.SendQuitMessageTo(lobbyAddr)
+    SnakeNet.CloseSocket()
+
+    if game:
+        game.quit()
+
+    sys.exit()
+
 def handleNetMessage():
     address, msgType, msgBody = SnakeNet.UnpackMessage()
 
     if msgType == SnakeNet.MessageType.MOTD:
         if not lobbyAddr and address == (HOST, SERVER_PORT):
-            print '\nMessage of the Day from ' + HOST + ':\n' + str(msgBody) + '\n'
+            SnakeCurses.ShowMOTD(HOST, str(msgBody))
     elif msgType == SnakeNet.MessageType.LOBBY_REP:
         if not lobbyAddr and address == (HOST, SERVER_PORT):
-            joinLobby(SnakeNet.UnpackLobbyList(msgBody))
+            #joinLobby(SnakeNet.UnpackLobbyList(msgBody))
+            pass
     elif msgType == SnakeNet.MessageType.LOBBY_JOIN:
         if address == lobbyAddr:
-            print 'starting game, yo'
+            print_debug('SnakeClient', 'starting game, yo')
             startGame()
 
 def joinLobby(lobbyList):
@@ -70,6 +84,7 @@ def joinLobby(lobbyList):
     print 'There are currently ' + str(len(lobbyList)) + ' lobbies on this server:'
     for i in range(len(lobbyList)):
         print str(i + 1) + '. Lobby ' + str(lobbyList[i][0]) + ' on port ' + str(lobbyList[i][1])
+        pass
 
     selection = int(raw_input('\nWhich lobby would you like to join? '))
 
@@ -78,18 +93,11 @@ def joinLobby(lobbyList):
     SnakeNet.SendLobbyJoinRequestTo(lobbyAddr)
 
 def handleInput():
-    sys.stdin.readline()
-    quit()
+    c = SnakeCurses.GetKey()
+    SnakeCurses.ShowDebug('Keycode: ' + str(c))
 
-def quit():
-    if lobbyAddr:
-        SnakeNet.SendQuitMessageTo(lobbyAddr)
-
-    if game:
-        game.quit()
-
-    SnakeNet.CloseSocket()
-    sys.exit()
+    if c == 27: # escape
+        quit()
 
 def startGame():
     global game
