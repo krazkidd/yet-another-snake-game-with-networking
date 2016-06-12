@@ -30,6 +30,7 @@ from struct import calcsize
 
 from SnakeConfig import *
 from SnakeDebug import *
+from SnakeEnums import *
 
 MAX_MSG_SIZE = 1024
 
@@ -52,10 +53,6 @@ STRUCT_FMT_LOBBY = '!BH'
 STRUCT_FMT_GAME_UPDATE = '!IB'
 
 sock = None
-
-class MessageType:
-    """Enum for Snake network messages"""
-    NONE, HELLO, MOTD, LOBBY_REQ, LOBBY_REP, LOBBY_JOIN, LOBBY_QUIT, READY, NOT_READY, START, UPDATE, CHAT, SETUP = range(13)
 
 def SendMOTDTo(address):
     buf = pack(STRUCT_FMT_HDR, MessageType.MOTD, calcsize(STRUCT_FMT_HDR) + len(MOTD))

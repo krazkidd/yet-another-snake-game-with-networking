@@ -22,6 +22,7 @@
 # *************************************************************************
 
 import curses
+import curses.ascii
 import select
 import sys
 
@@ -30,6 +31,9 @@ import SnakeGame
 import SnakeNet
 from SnakeConfig import *
 from SnakeDebug import *
+from SnakeEnums import *
+
+clientState = None
 
 # the lobby server address #
 lobbyAddr = None
@@ -37,13 +41,18 @@ lobbyAddr = None
 # an instance of a running game #
 game = None
 
+motd = None
+lobbyList = None
+
 def start():
+    global clientState
+    clientState = ClientState.INIT
+
     SnakeNet.InitClientSocket()
     SnakeCurses.InitClientWindow(startWithCurses)
 
 def startWithCurses():
-    SnakeNet.SendHelloMessage()
-    SnakeNet.SendLobbyListRequest()
+    startMOTDMode()
 
     while True:
         readable, writable, exceptional = select.select([SnakeNet.sock, sys.stdin], [], [])
@@ -64,40 +73,50 @@ def quit():
     sys.exit()
 
 def handleNetMessage():
+    global clientState, motd, lobbyList
+
     address, msgType, msgBody = SnakeNet.UnpackMessage()
 
-    if msgType == SnakeNet.MessageType.MOTD:
-        if not lobbyAddr and address == (HOST, SERVER_PORT):
-            SnakeCurses.ShowMOTD(HOST, str(msgBody))
-    elif msgType == SnakeNet.MessageType.LOBBY_REP:
-        if not lobbyAddr and address == (HOST, SERVER_PORT):
-            #joinLobby(SnakeNet.UnpackLobbyList(msgBody))
-            pass
-    elif msgType == SnakeNet.MessageType.LOBBY_JOIN:
-        if address == lobbyAddr:
-            print_debug('SnakeClient', 'starting game, yo')
-            startGame()
-
-def joinLobby(lobbyList):
-    global lobbyAddr
-
-    print 'There are currently ' + str(len(lobbyList)) + ' lobbies on this server:'
-    for i in range(len(lobbyList)):
-        print str(i + 1) + '. Lobby ' + str(lobbyList[i][0]) + ' on port ' + str(lobbyList[i][1])
-        pass
-
-    selection = int(raw_input('\nWhich lobby would you like to join? '))
-
-    lobbyAddr = (HOST, lobbyList[selection - 1][1])
-
-    SnakeNet.SendLobbyJoinRequestTo(lobbyAddr)
+    if msgType == MessageType.MOTD:
+        if clientState <= ClientState.MOTD and not lobbyAddr and address == (HOST, SERVER_PORT):
+            clientState = ClientState.MOTD
+            motd = msgBody
+            SnakeCurses.ShowMOTD(address, motd, lobbyList)
+    elif msgType == MessageType.LOBBY_REP:
+        if clientState <= ClientState.MOTD and not lobbyAddr and address == (HOST, SERVER_PORT):
+            clientState = ClientState.MOTD
+            lobbyList = SnakeNet.UnpackLobbyList(msgBody)
+            SnakeCurses.ShowMOTD(address, motd, lobbyList)
+    elif msgType == MessageType.LOBBY_JOIN:
+        if clientState == ClientState.MOTD and not lobbyAddr:
+            joinLobby(address)
 
 def handleInput():
     c = SnakeCurses.GetKey()
     SnakeCurses.ShowDebug('Keycode: ' + str(c))
 
-    if c == 27: # escape
+    if c == curses.ascii.ESC:
         quit()
+    elif curses.ascii.isdigit(c):
+        if clientState == ClientState.MOTD:
+            SnakeNet.SendLobbyJoinRequestTo((HOST, lobbyList[int(curses.ascii.unctrl(c)) - 1][1]))
+
+def startMOTDMode():
+    global motd, lobbyList
+    motd, lobbyList = (None, None)
+
+    clientState = ClientState.MOTD
+
+    SnakeCurses.ShowMessage('Contacting server at ' + HOST + ' . . .')
+    SnakeNet.SendHelloMessage()
+    SnakeNet.SendLobbyListRequest()
+
+def joinLobby(address):
+    global clientState, lobbyAddr
+    clientState = ClientState.LOBBY
+    lobbyAddr = address
+
+    SnakeCurses.ShowLobby()
 
 def startGame():
     global game

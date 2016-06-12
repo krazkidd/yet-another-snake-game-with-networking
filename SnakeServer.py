@@ -101,7 +101,7 @@ class LobbyServer:
             elif msgType == SnakeNet.MessageType.LOBBY_JOIN:
                 if address in self.activePlayers or address in self.spectatingPlayers or (len(self.activePlayers) + len(self.spectatingPlayers) < MAX_LOBBY_SIZE):
                     print_debug('LobbyServer', 'Woohoo! We got a new client!')
-                    SendLobbyJoinRequestTo(address) # LOBBY_JOIN is used for join confirmation
+                    SnakeNet.SendLobbyJoinRequestTo(address) # LOBBY_JOIN is used for join confirmation
                     self.spectatingPlayers[address] = None
                 else:
                     SendQuitMessageTo(address) # LOBBY_QUIT is used for join rejection
@@ -147,7 +147,7 @@ class LobbyServer:
 #           elif msgType == SnakeNet.MessageType.CHAT:
 #               pass
 
-            address, msgType, msgBody = CheckForMessage()
+            address, msgType, msgBody = SnakeNet.CheckForMessage()
         # end while (net message queue is empty)
     # end processNetMessages()
 # end class LobbyServer

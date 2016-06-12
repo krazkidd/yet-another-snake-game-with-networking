@@ -22,6 +22,7 @@
 # *************************************************************************
 
 import curses
+import os
 
 from SnakeDebug import *
 
@@ -35,12 +36,20 @@ def InitClientWindow(appCallback):
     global _appCallback
     _appCallback = appCallback
 
+    # set shorter delay for ESC key recognition
+    if not os.environ.has_key('ESCDELAY'):
+        os.environ.setdefault('ESCDELAY', '75')
+
     # cbreak on, echo off, keypad on, colors on
     curses.wrapper(_WrapperCallback)
 
 def _WrapperCallback(scr):
     global stdscr
     stdscr = scr
+
+    if curses.curs_set(0) == curses.ERR:
+        ShowDebug('Can\'t hide cursor')
+
     _appCallback()
 
 def ShowMessage(msg):
@@ -49,21 +58,36 @@ def ShowMessage(msg):
     stdscr.addstr(h / 2, max(0, w / 2 - len(msg) / 2), msg)
     stdscr.refresh()
 
-def ShowMOTD(host, msg):
+def ShowMOTD(host, motd, lobbyList):
     Erase()
-    stdscr.addstr(0, 0, 'Message of the Day from ' + host + ':')
     h, w = GetWindowSize()
-    stdscr.addstr(h / 2, max(0, w / 2 - len(msg) / 2), msg)
+    stdscr.addstr(2, max(0, w / 2 - len(motd) / 2), motd)
+
+    if lobbyList:
+        listHdr = 'There are currently ' + str(len(lobbyList)) + ' lobbies on this server (' + host[0] + '):'
+        y = 5
+        x = min(5, max(0, w / 2 - len(listHdr) / 2))
+        stdscr.addstr(y, x, listHdr)
+        for i in range(len(lobbyList)):
+            y += 2
+            stdscr.addstr(y, x, str(i + 1) + '. Lobby ' + str(lobbyList[i][0]) + ' on port ' + str(lobbyList[i][1]))
+
     stdscr.refresh()
+
+def ShowLobby():
+    ShowMessage('Joined lobby!')
 
 def ShowDebug(msg):
     global _lastDebugMessage
 
     if PRINT_DEBUG:
+        if len(msg) > 0:
+            msg += ' '
         _lastDebugMessage = msg
         h, w = stdscr.getmaxyx()
         stdscr.addstr(h - 1, 0, msg)
         stdscr.hline(h - 1, len(msg), '-', w - len(msg))
+        stdscr.refresh()
 
 def GetWindowSize():
     h, w = stdscr.getmaxyx()
