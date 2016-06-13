@@ -25,29 +25,24 @@ import curses
 import curses.ascii
 import select
 import sys
+import time # for sleep()
 
 import SnakeCurses
 import SnakeGame
 import SnakeNet
 from SnakeConfig import *
-from SnakeDebug import *
 from SnakeEnums import *
 
 clientState = None
 
-# the lobby server address #
-lobbyAddr = None
-
-# an instance of a running game #
-game = None
-
+mainSrvAddr = (HOST, SERVER_PORT)
 motd = None
 lobbyList = None
 
-def start():
-    global clientState
-    clientState = ClientState.INIT
+# the lobby server address #
+lobbyAddr = None
 
+def start():
     SnakeNet.InitClientSocket()
     SnakeCurses.InitClientWindow(startWithCurses)
 
@@ -63,65 +58,74 @@ def startWithCurses():
             handleInput()
 
 def quit():
-    if lobbyAddr:
+    if clientState == GameState.LOBBY:
         SnakeNet.SendQuitMessageTo(lobbyAddr)
     SnakeNet.CloseSocket()
-
-    if game:
-        game.quit()
 
     sys.exit()
 
 def handleNetMessage():
-    global clientState, motd, lobbyList
+    global motd, lobbyList, lobbyAddr
 
     address, msgType, msgBody = SnakeNet.UnpackMessage()
 
-    if msgType == MessageType.MOTD:
-        if clientState <= ClientState.MOTD and not lobbyAddr and address == (HOST, SERVER_PORT):
-            clientState = ClientState.MOTD
+    if clientState == GameState.MOTD and address == mainSrvAddr:
+        if msgType == MessageType.MOTD:
             motd = msgBody
             SnakeCurses.ShowMOTD(address, motd, lobbyList)
-    elif msgType == MessageType.LOBBY_REP:
-        if clientState <= ClientState.MOTD and not lobbyAddr and address == (HOST, SERVER_PORT):
-            clientState = ClientState.MOTD
+        elif msgType == MessageType.LOBBY_REP:
             lobbyList = SnakeNet.UnpackLobbyList(msgBody)
             SnakeCurses.ShowMOTD(address, motd, lobbyList)
-    elif msgType == MessageType.LOBBY_JOIN:
-        if clientState == ClientState.MOTD and not lobbyAddr:
-            joinLobby(address)
+    if clientState == GameState.MOTD: #TODO check address == expected lobby addr
+        if msgType == MessageType.LOBBY_JOIN:
+            lobbyAddr = address
+            startLobbyMode()
+    elif clientState == GameState.LOBBY and address == lobbyAddr:
+        if msgType == MessageType.START:
+            startGameMode()
 
 def handleInput():
     c = SnakeCurses.GetKey()
     SnakeCurses.ShowDebug('Keycode: ' + str(c))
 
-    if c == curses.ascii.ESC:
-        quit()
-    elif curses.ascii.isdigit(c):
-        if clientState == ClientState.MOTD:
-            SnakeNet.SendLobbyJoinRequestTo((HOST, lobbyList[int(curses.ascii.unctrl(c)) - 1][1]))
+    if clientState == GameState.MOTD:
+        if c == curses.ascii.ESC:
+            quit()
+        elif curses.ascii.isdigit(c):
+            selection = int(curses.ascii.unctrl(c))
+            if selection >= 1 and selection <= len(lobbyList):
+                SnakeNet.SendLobbyJoinRequestTo((mainSrvAddr[0], lobbyList[selection - 1][1]))
+        elif c in (ord('R'), ord('r')):
+            SnakeNet.SendLobbyListRequest()
+    elif clientState == GameState.LOBBY:
+        if c == curses.ascii.ESC:
+            SnakeNet.SendQuitMessageTo(lobbyAddr)
+            startMOTDMode()
 
 def startMOTDMode():
-    global motd, lobbyList
-    motd, lobbyList = (None, None)
+    global clientState
+    clientState  = GameState.MOTD
 
-    clientState = ClientState.MOTD
-
-    SnakeCurses.ShowMessage('Contacting server at ' + HOST + ' . . .')
+    SnakeCurses.ShowMessage('Contacting server at ' + mainSrvAddr[0] + ':' + str(mainSrvAddr[1]) + ' . . .')
     SnakeNet.SendHelloMessage()
     SnakeNet.SendLobbyListRequest()
 
-def joinLobby(address):
-    global clientState, lobbyAddr
-    clientState = ClientState.LOBBY
-    lobbyAddr = address
+def startLobbyMode():
+    global clientState
+    clientState = GameState.LOBBY
 
     SnakeCurses.ShowLobby()
 
-def startGame():
-    global game
+def startGameMode():
+    global clientState
+    clientState = GameState.GAME
 
-    #FIXME need IDs list from server
     game = SnakeGame.SnakeGame(WIN_WIDTH, WIN_HEIGHT, (0, 1))
     #game.startGame()
+
+    SnakeCurses.ShowMessage('The game will start running here . . .')
+
+    time.sleep(1)
+
+    startLobbyMode()
 

@@ -21,8 +21,8 @@
 #  
 # *************************************************************************
 
-class ClientState:
-    INIT, MOTD, LOBBY, GAME, QUIT = range(5)
+class GameState:
+    MOTD, LOBBY, GAME = range(3)
 
 class MessageType:
     """Enum for Snake network messages"""

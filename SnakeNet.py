@@ -93,7 +93,6 @@ def SendHelloMessage():
     sock.sendto(pack(STRUCT_FMT_HDR, MessageType.HELLO, calcsize(STRUCT_FMT_HDR)), (HOST, SERVER_PORT))
 
 def SendQuitMessageTo(address):
-    print_debug('SnakeNet', 'Sending QUIT message.')
     sock.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_QUIT, calcsize(STRUCT_FMT_HDR)), address)
 
 def IsServer(address):
