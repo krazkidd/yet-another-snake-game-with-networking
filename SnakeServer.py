@@ -22,135 +22,94 @@
 # *************************************************************************
 
 import os
+import select
 import sys
-from time import time
+import time
 
 import SnakeGame
 import SnakeNet
 from SnakeConfig import *
 from SnakeDebug import *
+from SnakeEnums import *
 
 class LobbyServer:
     def __init__(self, lobbyNum):
         # unique server ID #
         self.lobbyNum = lobbyNum
 
+        self.serverState = None
+
         # activePlayers maps net addresses to tuples of (X, Y) where:
         #   X: ready status (0 for not ready, 1 for ready)
         #   Y: Snake object when a game is running
         self.activePlayers = dict()
-        # spectatingPlayers maps net addresses to nothing, currently
-        self.spectatingPlayers = dict()
 
         self.game = None
 
-        # open a socket and wait for clients
         self.connectPort = SnakeNet.InitLobbyServerSocket()
-    # end __init__()
 
-    # lobby server thread runs here
     def start(self):
-        # NOTE: summary of net stuff
-        # when all players are ready, start a new game and send
-        #   initial state
-        # get messages from players and update game state
-        #  * we don't need to update any other player right away unless
-        #    they are very close
-        #  * but we do need to send updates every so often just to keep
-        #    clients synch'd
-        # the only client updates should be the turning of the avatar (left or right)
-        #  * keep track of a sequence number in update packets, as well as client
-        #    gameworld ticks since last update (so the server can reproduce what client has)
+        self.startLobbyMode()
 
         try:
             while True:
-                self.processNetMessages()
+                readable, writable, exceptional = select.select([SnakeNet.sock], [], [], 0.005)
 
-                if self.game:
-                    currTime = time()
-                    if currTime - lastTickTime > 0.1:
-                        self.game.tick()
-                        lastTickTime = currTime
-            # end while (main server loop)
+                if SnakeNet.sock in readable:
+                    self.handleNetMessage()
+                else:
+                    #TODO manage clients and game
+                    pass
         except BaseException as e:
             print_err('LobbyServer', str(self.lobbyNum) + ': ' + str(e))
         finally:
             SnakeNet.CloseSocket()
-    # end start()
 
-    def Game(self):
-        self.game = SnakeGame.SnakeGame(WIN_WIDTH, WIN_HEIGHT, self.activePlayers.keys())
+    def handleNetMessage(self):
+        address, msgType, msgBody = SnakeNet.UnpackMessage()
 
-        for addr, playerTuple in self.activePlayers:
-            SendSetupMessage(addr)
-
-        for addr, playerTuple in self.activePlayers:
-            SendStartMessage(addr)
-        for addr in self.spectatingPlayers:
-            SendStartMessage(addr)
-    # end startGame()
-
-    def processNetMessages(self):
-        address, msgType, msgBody = SnakeNet.CheckForMessage()
-
-        #FIXME this will break the game if the server receives a lot of messages, because it's busy handling those
-        #      instead of ticking the game
-        while not msgType == SnakeNet.MessageType.NONE:
-            if msgType == SnakeNet.MessageType.HELLO:
-                SendHelloMessageTo(address)
-            elif msgType == SnakeNet.MessageType.LOBBY_JOIN:
-                if address in self.activePlayers or address in self.spectatingPlayers or (len(self.activePlayers) + len(self.spectatingPlayers) < MAX_LOBBY_SIZE):
+        if self.serverState == GameState.LOBBY:
+            if msgType == MessageType.HELLO:
+                SnakeNet.SendHelloMessageTo(address)
+            elif msgType == MessageType.LOBBY_JOIN:
+                if address not in self.activePlayers and len(self.activePlayers) < MAX_LOBBY_SIZE:
                     print_debug('LobbyServer', 'Woohoo! We got a new client!')
                     SnakeNet.SendLobbyJoinRequestTo(address) # LOBBY_JOIN is used for join confirmation
-                    self.spectatingPlayers[address] = None
+                    self.activePlayers[address] = (MessageType.NOT_READY, None)
                 else:
-                    SendQuitMessageTo(address) # LOBBY_QUIT is used for join rejection
-            elif msgType == SnakeNet.MessageType.LOBBY_QUIT:
+                    print_debug('LobbyServer', 'Lobby full. New client rejected.')
+                    SnakeNet.SendQuitMessageTo(address) # LOBBY_QUIT is used for join rejection
+            elif msgType == MessageType.LOBBY_QUIT:
                 if address in self.activePlayers:
                     print_debug('LobbyServer', 'Active player is quitting.')
                     del self.activePlayers[address]
-                elif address in self.spectatingPlayers:
-                    print_debug('LobbyServer', 'Spectating player is quitting.')
-                    del self.spectatingPlayers[address]
-#           elif msgType == SnakeNet.MessageType.READY:
-#               if address in self.activePlayers:
-#                   self.activePlayers[address][0] = 1
-#                   # check if everyone is ready to start
-#                   #TODO set a timer when a majority is ready in order to prevent griefers
-#                   readyToStart = True
-#                   for addr, playerTuple in self.activePlayers:
-#                       if playerTuple[0] != 1:
-#                           readyToStart = False
-#                           break
-#                   if readyToStart:
-#                       #FIXME start a game
-#                       pass
-#           elif msgType == SnakeNet.MessageType.NOT_READY:
-#               if address in self.activePlayers:
-#                   # get player info from activePlayers list
-#                   playerTuple = self.activePlayers[address]
-#                   # set ready status
-#                   playerTuple[0] = 0
-#                   # put it back
-#                   self.activePlayers[address] = playerTuple
-#               #TODO if we started the majority-ready timer and we lost majority, stop it
-            elif msgType == SnakeNet.MessageType.UPDATE:
-                # process update from client; change server state if valid; echo to other clients
-                #clientTickNum, newSnakeDir = unpack(STRUCT_FMT_GAME_UPDATE, msg[calcsize(STRUCT_FMT_HDR):])
-                #TODO validate client input (check tick num--it shouldn't be off server tick num by more than 1 and if it is off, send server state)
-                print_debug('LobbyServer', 'Tick num: ' + str(clientTickNum) + ', New snake direction: ' + str(newSnakeDir))
-                for addr in self.activePlayers:
-                    # don't echo UPDATE to player that just sent it
-                    #TODO use better variable names
-                    if addr != address:
-                        sock.sendto(msg, addr)
-#           elif msgType == SnakeNet.MessageType.CHAT:
-#               pass
+            elif msgType == MessageType.READY:
+                if address in self.activePlayers:
+                    self.activePlayers[address] = (MessageType.READY, None)
+                    allReady = True
+                    for addr in self.activePlayers:
+                        if self.activePlayers[addr][0] == MessageType.NOT_READY:
+                            allReady = False
+                            break
+                    if allReady:
+                        self.startGameMode()
+        elif self.serverState == GameState.GAME and (address in self.activePlayers):
+            #TODO pass message to game
+            pass
 
-            address, msgType, msgBody = SnakeNet.CheckForMessage()
-        # end while (net message queue is empty)
-    # end processNetMessages()
-# end class LobbyServer
+    def startLobbyMode(self):
+        self.serverState = GameState.LOBBY
+
+    def startGameMode(self):
+        self.serverState = GameState.GAME
+
+        self.game = SnakeGame.SnakeGame(WIN_WIDTH, WIN_HEIGHT, self.activePlayers)
+
+        for addr in self.activePlayers:
+            SnakeNet.SendSetupMessage(addr)
+
+        for addr in self.activePlayers:
+            SnakeNet.SendStartMessage(addr)
 
 class MainServer:
     @staticmethod
@@ -177,9 +136,9 @@ class MainServer:
             while True:
                 address, msgType = SnakeNet.WaitForClient()
 
-                if msgType == SnakeNet.MessageType.HELLO:
+                if msgType == MessageType.HELLO:
                     SnakeNet.SendMOTDTo(address)
-                elif msgType == SnakeNet.MessageType.LOBBY_REQ:
+                elif msgType == MessageType.LOBBY_REQ:
                     SnakeNet.SendLobbyListTo(address, lobbies)
         except BaseException as e:
             print_err('MainServer', str(e))
@@ -189,4 +148,4 @@ class MainServer:
 
         SnakeNet.CloseSocket()
         sys.exit(0)
-# end class MainServer
+

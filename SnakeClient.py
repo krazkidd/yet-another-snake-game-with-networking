@@ -80,6 +80,8 @@ def handleNetMessage():
         if msgType == MessageType.LOBBY_JOIN:
             lobbyAddr = address
             startLobbyMode()
+        elif msgType == MessageType.LOBBY_QUIT:
+            SnakeCurses.ShowDebug('Lobby rejected your join request.')
     elif clientState == GameState.LOBBY and address == lobbyAddr:
         if msgType == MessageType.START:
             startGameMode()
@@ -101,6 +103,8 @@ def handleInput():
         if c == curses.ascii.ESC:
             SnakeNet.SendQuitMessageTo(lobbyAddr)
             startMOTDMode()
+        elif c in (ord('X'), ord('x')):
+            SnakeNet.SendReadyMessageTo(lobbyAddr)
 
 def startMOTDMode():
     global clientState

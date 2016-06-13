@@ -29,10 +29,7 @@ import pygcurse
 from pygame.locals import * # keyboard keys and stuff
 
 import Snake
-
-class GameState:
-    """Enum for Snake game state"""
-    GAME_OVER = 1
+from Snake import Dir
 
 class SnakeGame:
     def __init__(self, boardWidth, boardHeight, playersList):
@@ -42,9 +39,10 @@ class SnakeGame:
         self.win = None
 
         snake1 = Snake.Snake(15, 15, Dir.Right, 4)
+        snake2 = Snake.Snake(30, 15, Dir.Left, 4)
         #TODO if playersList is less than size of game, add robot players (to playersList, so the zip() works)
 
-        self.snakes = zip(playersList, (snake1))
+        self.snakes = zip(playersList, (snake1, snake2))
 
         self.pellet = Snake.Pellet(self.boardWidth - 1, self.boardHeight - 1, 'yellow')
 

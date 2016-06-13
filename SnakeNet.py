@@ -84,10 +84,10 @@ def UnpackLobbyList(msgBody):
     return lobbyList
 
 def SendSetupMessage(address):
-    sock.sendto(address, pack(STRUCT_FMT_HDR, MessageType.SETUP, calcsize(STRUCT_FMT_HDR)))
+    sock.sendto(pack(STRUCT_FMT_HDR, MessageType.SETUP, calcsize(STRUCT_FMT_HDR)), address)
 
 def SendStartMessage(address):
-    sock.sendto(address, pack(STRUCT_FMT_HDR, MessageType.START, calcsize(STRUCT_FMT_HDR)))
+    sock.sendto(pack(STRUCT_FMT_HDR, MessageType.START, calcsize(STRUCT_FMT_HDR)), address)
 
 def SendHelloMessage():
     sock.sendto(pack(STRUCT_FMT_HDR, MessageType.HELLO, calcsize(STRUCT_FMT_HDR)), (HOST, SERVER_PORT))
@@ -103,6 +103,9 @@ def SendLobbyListRequest():
 
 def SendLobbyJoinRequestTo(address):
     sock.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_JOIN, calcsize(STRUCT_FMT_HDR)), address)
+
+def SendReadyMessageTo(address):
+    sock.sendto(pack(STRUCT_FMT_HDR, MessageType.READY, calcsize(STRUCT_FMT_HDR)), address)
 
 def SendGameUpdateTo(address, packedUpdate):
     msg = pack(STRUCT_FMT_HDR, MessageType.UPDATE, calcsize(STRUCT_FMT_HDR) + calcsize(STRUCT_FMT_GAME_UPDATE))
