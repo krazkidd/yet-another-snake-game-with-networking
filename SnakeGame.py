@@ -70,13 +70,13 @@ class SnakeGame:
             self.snakes.append(Snake.SnakeAI(startPos[count][0], startPos[count][1], startDir[count]))
             count += 1
         if numAI >= 2 and numHumans + 2 <= MAX_PLAYERS:
-            self.snakes.append(Snake.Snake(startPos[count][0], startPos[count][1], startDir[count]))
+            self.snakes.append(Snake.SnakeAI(startPos[count][0], startPos[count][1], startDir[count]))
             count += 1
         if numAI >= 3 and numHumans + 3 <= MAX_PLAYERS:
-            self.snakes.append(Snake.Snake(startPos[count][0], startPos[count][1], startDir[count]))
+            self.snakes.append(Snake.SnakeAI(startPos[count][0], startPos[count][1], startDir[count]))
             count += 1
         if numAI >= 4 and numHumans + 4 <= MAX_PLAYERS:
-            self.snakes.append(Snake.Snake(startPos[count][0], startPos[count][1], startDir[count]))
+            self.snakes.append(Snake.SnakeAI(startPos[count][0], startPos[count][1], startDir[count]))
             count += 1
 
         self.tickNum = 0
