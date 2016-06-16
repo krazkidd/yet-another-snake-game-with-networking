@@ -75,6 +75,8 @@ class Snake:
                 ])
 
         self.heading = heading
+        self.headingChanged = False
+        self.nextHeading = None
 
         self.shouldGrow = False
 
@@ -119,6 +121,12 @@ class Snake:
         else:
             self.body.popleft()
 
+        if self.nextHeading:
+            self.heading = self.nextHeading
+            self.nextHeading = None
+
+        self.headingChanged = False
+
     def changeHeading(self, newHeading):
 
         """Tell the Snake the new direction to move in.
@@ -131,16 +139,19 @@ class Snake:
 
         """
 
-        #FIXME when changing heading, keep track of old heading until the next move()
+        # if heading was already changed, queue the change for
+        # the next move()
+        if self.headingChanged:
+            self.nextHeading = newHeading
+            return False
 
-        # don't do anything if the new heading is opposite the current heading
-        if ((self.heading == Dir.Up and newHeading == Dir.Down)
-                or (self.heading == Dir.Down and newHeading == Dir.Up)
-                or (self.heading == Dir.Left and newHeading == Dir.Right)
-                or (self.heading == Dir.Right and newHeading == Dir.Left)):
+        # skip if move is parallel
+        if ((self.heading in (Dir.Up, Dir.Down) and newHeading in (Dir.Up, Dir.Down))
+                or (self.heading in (Dir.Left, Dir.Right) and newHeading in (Dir.Left, Dir.Right))):
             return False
 
         self.heading = newHeading
+        self.headingChanged = True
         return True
 
     def isColl(self, otherSnake):
