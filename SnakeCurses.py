@@ -82,17 +82,20 @@ def ShowGame(game):
 
     stdscr.border()
 
+    debugStr = ''
     h, w = stdscr.getmaxyx()
     for snake in game.snakes:
+        if len(debugStr) > 0:
+            debugStr += ', '
         for pos in snake.body:
             if pos[0] >= 0 and pos[0] <= w - 1 and pos[1] >= 0 and pos[1] <= h - 1:
                 stdscr.addch(pos[1], pos[0], ord('O'))
-
-    #snake = game.snakes[0]
-    #ShowDebug('tick: ' + str(game.tickNum) + ', head: ' + str(snake.headPos) + ', body: ' + str(snake.body))
-    ShowDebug('width: ' + str(game.width) + ', height: ' + str(game.height))
+        debugStr += 'snake: ' + str(len(snake.body))
 
     stdscr.addch(game.pellet.pos[1], game.pellet.pos[0], ord('+'))
+
+    #TODO name the snakes and show score at the top?
+    ShowDebug(debugStr)
 
     stdscr.refresh()
 
