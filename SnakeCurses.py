@@ -75,24 +75,45 @@ def ShowMOTD(host, motd, lobbyList):
     stdscr.refresh()
 
 def ShowLobby():
-    ShowMessage('Joined lobby!')
+    ShowMessage('Waiting for game to start . . .')
 
-def ShowDebug(msg):
+def ShowGame(game):
+    stdscr.erase()
+
+    stdscr.border()
+
+    h, w = stdscr.getmaxyx()
+    for snake in game.snakes:
+        for pos in snake.body:
+            if pos[0] >= 0 and pos[0] <= w - 1 and pos[1] >= 0 and pos[1] <= h - 1:
+                stdscr.addch(pos[1], pos[0], ord('O'))
+
+    #snake = game.snakes[0]
+    #ShowDebug('tick: ' + str(game.tickNum) + ', head: ' + str(snake.headPos) + ', body: ' + str(snake.body))
+    ShowDebug('width: ' + str(game.width) + ', height: ' + str(game.height))
+
+    stdscr.addch(game.pellet.pos[1], game.pellet.pos[0], ord('+'))
+
+    stdscr.refresh()
+
+def ShowDebug(msg=None):
     global _lastDebugMessage
 
     if PRINT_DEBUG:
-        if len(msg) > 0:
-            msg += ' '
-        _lastDebugMessage = msg
         h, w = stdscr.getmaxyx()
+        if msg and len(msg) > 0:
+            msg += ' '
+            msg = msg[:w - 1]
+            _lastDebugMessage = msg
+        else:
+            msg = _lastDebugMessage
         stdscr.addstr(h - 1, 0, msg)
-        stdscr.hline(h - 1, len(msg), '-', w - len(msg))
-        stdscr.refresh()
+        stdscr.hline(h - 1, len(msg), ord('-'), w - len(msg))
 
 def GetWindowSize():
     h, w = stdscr.getmaxyx()
     if PRINT_DEBUG:
-        h = h - 1
+        h -= 1
     return (h, w)
 
 def GetKey():
@@ -100,4 +121,5 @@ def GetKey():
 
 def Erase():
     stdscr.erase()
-    ShowDebug(_lastDebugMessage)
+    ShowDebug()
+    stdscr.refresh()

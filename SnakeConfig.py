@@ -38,9 +38,6 @@ MOTD = 'Welcome to my Snake-M development server!'
 # number of lobby servers to spawn
 NUM_LOBBIES = 1
 
-# total clients allowed in a lobby
-MAX_LOBBY_SIZE = 8
-
 
 ########## (SERVER ONLY) GAME CONFIG VARS ##########
 

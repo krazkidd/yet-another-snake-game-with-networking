@@ -21,8 +21,12 @@
 #  
 # *************************************************************************
 
+class Dir:
+        """An enum of the cardinal directions."""
+        Up, Down, Left, Right = range(4)
+
 class GameState:
-    MOTD, LOBBY, GAME = range(3)
+    MOTD, LOBBY, GAME_SETUP, GAME, GAME_OVER = range(5)
 
 class MessageType:
     """Enum for Snake network messages"""

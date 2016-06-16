@@ -40,7 +40,7 @@ class LobbyServer:
         self.serverState = None
 
         # activePlayers maps net addresses to tuples of (X, Y) where:
-        #   X: ready status (0 for not ready, 1 for ready)
+        #   X: ready status (MessageType.{NOT_,}READY)
         #   Y: Snake object when a game is running
         self.activePlayers = dict()
 
@@ -72,13 +72,14 @@ class LobbyServer:
             if msgType == MessageType.HELLO:
                 SnakeNet.SendHelloMessageTo(address)
             elif msgType == MessageType.LOBBY_JOIN:
-                if address not in self.activePlayers and len(self.activePlayers) < MAX_LOBBY_SIZE:
-                    print_debug('LobbyServer', 'Woohoo! We got a new client!')
-                    SnakeNet.SendLobbyJoinRequestTo(address) # LOBBY_JOIN is used for join confirmation
-                    self.activePlayers[address] = (MessageType.NOT_READY, None)
-                else:
-                    print_debug('LobbyServer', 'Lobby full. New client rejected.')
-                    SnakeNet.SendQuitMessageTo(address) # LOBBY_QUIT is used for join rejection
+                #TODO reinstate lobby size check--disabled so we don't have to restart server every time client crashes
+                #if address not in self.activePlayers and len(self.activePlayers) < SnakeGame.MAX_PLAYERS:
+                print_debug('LobbyServer', 'Woohoo! We got a new client!')
+                SnakeNet.SendLobbyJoinRequestTo(address) # LOBBY_JOIN is used for join confirmation
+                self.activePlayers[address] = (MessageType.NOT_READY, None)
+                #else:
+                #    print_debug('LobbyServer', 'Lobby full. New client rejected.')
+                #    SnakeNet.SendQuitMessageTo(address) # LOBBY_QUIT is used for join rejection
             elif msgType == MessageType.LOBBY_QUIT:
                 if address in self.activePlayers:
                     print_debug('LobbyServer', 'Active player is quitting.')
@@ -88,9 +89,7 @@ class LobbyServer:
                     self.activePlayers[address] = (MessageType.READY, None)
                     allReady = True
                     for addr in self.activePlayers:
-                        if self.activePlayers[addr][0] == MessageType.NOT_READY:
-                            allReady = False
-                            break
+                        allReady = allReady and self.activePlayers[addr][0] == MessageType.READY
                     if allReady:
                         self.startGameMode()
         elif self.serverState == GameState.GAME and (address in self.activePlayers):
@@ -103,7 +102,7 @@ class LobbyServer:
     def startGameMode(self):
         self.serverState = GameState.GAME
 
-        self.game = SnakeGame.SnakeGame(WIN_WIDTH, WIN_HEIGHT, self.activePlayers)
+        self.game = SnakeGame.SnakeGame(WIN_WIDTH, WIN_HEIGHT, len(self.activePlayers))
 
         for addr in self.activePlayers:
             SnakeNet.SendSetupMessage(addr)

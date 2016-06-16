@@ -21,121 +21,95 @@
 #  
 # *************************************************************************
 
-import os
-from time import time
+import select
+import sys
 
-import pygame
-import pygcurse
-from pygame.locals import * # keyboard keys and stuff
+import curses
+import curses.ascii
 
 import Snake
-from Snake import Dir
+import SnakeNet
+from SnakeEnums import *
+
+MAX_PLAYERS = 4
 
 class SnakeGame:
-    def __init__(self, boardWidth, boardHeight, playersList):
-        self.boardWidth = boardWidth
-        self.boardHeight = boardHeight
+    def __init__(self, width, height, numHumans=1, numAI=0):
+        self.width = width
+        self.height = height
 
-        self.win = None
+        #TODO add pellet after snakes and make sure pellet doesn't appear
+        #     on top of a snake...
+        self.pellet = Snake.Pellet(1, 1, width - 1, height - 1)
 
-        snake1 = Snake.Snake(15, 15, Dir.Right, 4)
-        snake2 = Snake.Snake(30, 15, Dir.Left, 4)
-        #TODO if playersList is less than size of game, add robot players (to playersList, so the zip() works)
+        startPos = [
+            (width/4, height/4),
+            (width - width/4, height/4),
+            (width/4, height - height/4),
+            (width - width/4, height - height/4)
+            ]
+        startDir = [Dir.Right, Dir.Down, Dir.Left, Dir.Up]
 
-        self.snakes = zip(playersList, (snake1, snake2))
+        count = 0
 
-        self.pellet = Snake.Pellet(self.boardWidth - 1, self.boardHeight - 1, 'yellow')
+        self.snakes = list()
+        if numHumans >= 1:
+            self.snakes.append(Snake.Snake(startPos[count][0], startPos[count][1], startDir[count]))
+            count += 1
+        if numHumans >= 2:
+            self.snakes.append(Snake.Snake(startPos[count][0], startPos[count][1], startDir[count]))
+            count += 1
+        if numHumans >= 3:
+            self.snakes.append(Snake.Snake(startPos[count][0], startPos[count][1], startDir[count]))
+            count += 1
+        if numHumans >= 4:
+            self.snakes.append(Snake.Snake(startPos[count][0], startPos[count][1], startDir[count]))
+            count += 1
 
-        self.gameStateChanged = False
+        if numAI >= 1 and numHumans + 1 <= MAX_PLAYERS:
+            self.snakes.append(Snake.SnakeAI(startPos[count][0], startPos[count][1], startDir[count]))
+            count += 1
+        if numAI >= 2 and numHumans + 2 <= MAX_PLAYERS:
+            self.snakes.append(Snake.Snake(startPos[count][0], startPos[count][1], startDir[count]))
+            count += 1
+        if numAI >= 3 and numHumans + 3 <= MAX_PLAYERS:
+            self.snakes.append(Snake.Snake(startPos[count][0], startPos[count][1], startDir[count]))
+            count += 1
+        if numAI >= 4 and numHumans + 4 <= MAX_PLAYERS:
+            self.snakes.append(Snake.Snake(startPos[count][0], startPos[count][1], startDir[count]))
+            count += 1
+
         self.tickNum = 0
-    # end __init__()
 
-def startGame(self):
-    # initiate pygame and pygcurse
-    os.environ['SDL_VIDEO_CENTERED'] = '1' # center window in Windows
-    pygame.init()
-    self.win = pygcurse.PygcurseWindow(WIN_WIDTH, WIN_HEIGHT, 'Snake')
-    self.win.autoupdate = False # turn off autoupdate so window doesn't flicker
+    def input(self, snakeIndex, dir):
+        self.snakes[snakeIndex].changeHeading(dir)
 
-    drawWindow()
-
-def drawWindow(self):
-    global win
-
-    # clear the screen
-    #win.erase() # this would be used instead but for a bug...
-    self.win.fill(' ')
-
-    # draw outside border
-    #TODO
-
-    # draw game data
-    self.win.putchars("Player 1 score: " + str(game.snakes[0].length), 0, 0)
-    self.win.putchars("Player 2 score: " + str(game.snakes[1].length), 30, 0)
-
-    for snake in self.snakes:
-        for pos in snake:
-            # pos is a tuple (x, y)
-            self.win.putchars('O', pos[0], pos[1], fgcolor = snake.fgcolor)
-
-    # draw pellet
-    self.win.putchar('+', game.pellet.posx, game.pellet.posy, game.pellet.fgcolor)
-
-    # actually paint the window
-    self.win.update()
-
-def quit():
-    pygame.quit()
-
-#FIXME return game condition (running or game over) or report it via member variable
     def tick(self):
         for snake in self.snakes:
-            # move players' snakes
-            #FIXME snakes need to know positions of other snakes (at least in the local area)
             snake.move(self.pellet)
 
             # check for self-collision
             if snake.isColl(snake):
-                print_debug('SnakeGame', 'a snake bit itself')
+                #TODO kill snake
+                pass
 
             # check if colliding with any other snakes
             #FIXME collision detection (do something better than O(n²)
             for otherSnake in self.snakes:
                 if snake != otherSnake:
                     if snake.isColl(otherSnake):
-                        print_debug('SnakeGame', 'some snake ran into another snake')
+                        #TODO kill snake
+                        pass
 
             #TODO check if hitting the edge
-            #if ...
+            if snake.headPos[0] in (0, self.width) or snake.headPos[1] in (0, self.height):
+                #TODO kill snake
+                pass
 
             # check if snake is on a pellet
-            if snake.headX == self.pellet.posx and snake.headY == self.pellet.posy:
-                snake.length += 1
-                self.pellet = Pellet(self.winWidth - 1, self.winHeight - 1, fgcolor = 'yellow')
+            if snake.headPos == self.pellet.pos:
+                self.pellet.RandomizePosition()
                 snake.grow()
 
         self.tickNum += 1
-    # end tick()
 
-def processUserInput(self):
-    # process input queue
-    for event in pygame.event.get():
-        if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
-            quit()
-        elif event.type == KEYDOWN:
-            if event.key == K_UP:
-                self.snake1.changeHeading(Dir.Up)
-            elif event.key == K_DOWN:
-                self.snake1.changeHeading(Dir.Down)
-            elif event.key == K_LEFT:
-                self.snake1.changeHeading(Dir.Left)
-            elif event.key == K_RIGHT:
-                self.snake1.changeHeading(Dir.Right)
-
-    #FIXME  send player input if it changed game state
-    self.sendNetMessages()
-
-def sendNetMessages(self):
-    if self.game.gameStateChanged == True:
-        SendGameUpdateTo(lobbyAddr, pack(STRUCT_FMT_GAME_UPDATE, game.tickNum, game.snake1.heading))
-        self.game.gameStateChanged = False
