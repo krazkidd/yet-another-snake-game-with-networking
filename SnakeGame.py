@@ -40,7 +40,7 @@ class SnakeGame:
 
         #TODO add pellet after snakes and make sure pellet doesn't appear
         #     on top of a snake...
-        self.pellet = Snake.Pellet(1, 1, width - 1, height - 1)
+        self.pellet = Snake.Pellet(1, 1, width - 1 - 1, height - 1 - 1)
 
         startPos = [
             (width/4, height/4),
