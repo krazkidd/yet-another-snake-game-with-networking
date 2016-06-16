@@ -95,7 +95,7 @@ def ShowGame(game):
     stdscr.addch(game.pellet.pos[1], game.pellet.pos[0], ord('+'))
 
     #TODO name the snakes and show score at the top?
-    ShowDebug(debugStr)
+    ShowDebugInGame(debugStr)
 
     stdscr.refresh()
 
@@ -112,6 +112,20 @@ def ShowDebug(msg=None):
             msg = _lastDebugMessage
         stdscr.addstr(h - 1, 0, msg)
         stdscr.hline(h - 1, len(msg), ord('-'), w - len(msg))
+
+def ShowDebugInGame(msg=None):
+    global _lastDebugMessage
+
+    if PRINT_DEBUG:
+        h, w = stdscr.getmaxyx()
+        if msg and len(msg) > 0:
+            msg = ' ' + msg + ' '
+            # truncate very long messages
+            msg = msg[:w - 1 - 2] # - 2 because we start at cell 2
+            _lastDebugMessage = msg
+        else:
+            msg = _lastDebugMessage
+        stdscr.addstr(h - 1, 2, msg)
 
 def GetWindowSize():
     h, w = stdscr.getmaxyx()
