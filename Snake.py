@@ -208,16 +208,33 @@ class SnakeAI(Snake):
         elif p.pos[1] > self.headPos[1]:
             desiredDir = Dir.Down
 
-        if not self.changeHeading(desiredDir):
-            if desiredDir in (Dir.Left, Dir.Right):
-                if self.headPos[1] > 1:
-                    self.changeHeading(Dir.Up)
-                else:
-                    self.changeHeading(Dir.Down)
-            else:
-                if self.headPos[0] > 1:
-                    self.changeHeading(Dir.Left)
-                else:
+        if not desiredDir == self.heading:
+            if desiredDir in (Dir.Down, Dir.Up) and self.heading in (Dir.Down, Dir.Up):
+                if self.headPos[1] == 1:
                     self.changeHeading(Dir.Right)
+                #TODO pass gameboard instance or size so
+                #     we can check height
+                #elif self.headPos[1] = MAX_GAMEBOARD_WIDTH:
+                #    self.changeHeading(Dir.Left)
+                else:
+                    if random.randint(0, 1) == 0:
+                        self.changeHeading(Dir.Right)
+                    else:
+                        self.changeHeading(Dir.Up)
+            else:
+                if desiredDir in (Dir.Left, Dir.Right) and self.heading in (Dir.Left, Dir.Right):
+                    if self.headPos[0] == 1:
+                        self.changeHeading(Dir.Down)
+                    #TODO pass gameboard instance or size so
+                    #     we can check height
+                    #elif self.headPos[1] = MAX_GAMEBOARD_WIDTH:
+                    #    self.changeHeading(Dir.LEFT)
+                    else:
+                        if random.randint(0, 1) == 0:
+                            self.changeHeading(Dir.Down)
+                        else:
+                            self.changeHeading(Dir.Up)
+
+            self.changeHeading(desiredDir)
 
         Snake.move(self, p)
