@@ -67,7 +67,7 @@ def startWithCurses():
         if sys.stdin in readable:
             handleInput()
 
-        if game and sockTimeout:
+        if clientState == GameState.GAME:
             tickTime += sockTimeout
             if tickTime >= 0.1:
                 tickTime -= 0.1
@@ -126,7 +126,8 @@ def handleInput():
     elif clientState == GameState.GAME:
         if c == curses.ascii.ESC:
             #TODO make it harder to quit running game
-            quit()
+            SnakeNet.SendQuitMessageTo(lobbyAddr)
+            startMOTDMode()
         elif c in (ord('H'), ord('h'), curses.KEY_LEFT):
             game.snakes[0].changeHeading(Dir.Left)
         elif c in (ord('J'), ord('j',), curses.KEY_DOWN):
@@ -137,7 +138,7 @@ def handleInput():
             game.snakes[0].changeHeading(Dir.Right)
     elif clientState == GameState.GAME_OVER:
         if c == curses.ascii.ESC:
-            quit()
+            startLobbyMode()
 
 def startMOTDMode():
     global clientState
