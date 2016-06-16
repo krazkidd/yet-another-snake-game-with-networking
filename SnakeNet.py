@@ -159,4 +159,5 @@ def CheckForMessage():
 def UnpackMessage():
     msg, address = sock.recvfrom(MAX_MSG_SIZE)
     msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
+    #TODO verify msg size!
     return address, msgType, msg[calcsize(STRUCT_FMT_HDR):]
