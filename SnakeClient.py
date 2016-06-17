@@ -109,7 +109,7 @@ def handleInput():
     SnakeCurses.ShowDebug('Keycode: ' + str(c))
 
     if clientState == GameState.MOTD:
-        if c == curses.ascii.ESC:
+        if c in (curses.ascii.ESC, ord('Q'), ord('q')):
             quit()
         elif curses.ascii.isdigit(c):
             selection = int(curses.ascii.unctrl(c))
@@ -118,7 +118,7 @@ def handleInput():
         elif c in (ord('R'), ord('r')):
             SnakeNet.SendLobbyListRequest()
     elif clientState == GameState.LOBBY:
-        if c == curses.ascii.ESC:
+        if c in (curses.ascii.ESC, ord('Q'), ord('q')):
             SnakeNet.SendQuitMessageTo(lobbyAddr)
             startMOTDMode()
         elif c in (ord('X'), ord('x')):
@@ -137,7 +137,7 @@ def handleInput():
         elif c in (ord('L'), ord('l',), curses.KEY_RIGHT):
             game.snakes[0].changeHeading(Dir.Right)
     elif clientState == GameState.GAME_OVER:
-        if c == curses.ascii.ESC:
+        if c in (curses.ascii.ESC, ord('Q'), ord('q')):
             startLobbyMode()
 
 def startMOTDMode():
