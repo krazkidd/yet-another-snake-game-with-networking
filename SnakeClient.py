@@ -100,6 +100,8 @@ def handleNetMessage():
             startLobbyMode()
         elif msgType == MessageType.LOBBY_QUIT:
             SnakeCurses.ShowDebug('Lobby rejected your join request.')
+            # show new debug message
+            SnakeCurses.ShowMOTD(address, motd, lobbyList)
     elif clientState == GameState.LOBBY and address == lobbyAddr:
         if msgType == MessageType.START:
             startGameMode()

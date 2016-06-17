@@ -72,14 +72,14 @@ class LobbyServer:
             if msgType == MessageType.HELLO:
                 SnakeNet.SendHelloMessageTo(address)
             elif msgType == MessageType.LOBBY_JOIN:
-                #TODO reinstate lobby size check--disabled so we don't have to restart server every time client crashes
-                #if address not in self.activePlayers and len(self.activePlayers) < SnakeGame.MAX_PLAYERS:
-                print_debug('LobbyServer', 'Woohoo! We got a new client!')
-                SnakeNet.SendLobbyJoinRequestTo(address) # LOBBY_JOIN is used for join confirmation
-                self.activePlayers[address] = (MessageType.NOT_READY, None)
-                #else:
-                #    print_debug('LobbyServer', 'Lobby full. New client rejected.')
-                #    SnakeNet.SendQuitMessageTo(address) # LOBBY_QUIT is used for join rejection
+                if address in self.activePlayers or len(self.activePlayers) < SnakeGame.MAX_PLAYERS:
+                    print_debug('LobbyServer', 'Woohoo! We got a new client!')
+                    SnakeNet.SendLobbyJoinRequestTo(address) # LOBBY_JOIN is used for join confirmation
+                    self.activePlayers[address] = (MessageType.NOT_READY, None)
+                    print_debug('LobbyServer', 'Lobby has ' + str(len(self.activePlayers)) + ' players.')
+                else:
+                    print_debug('LobbyServer', 'Lobby full. New client rejected.')
+                    SnakeNet.SendQuitMessageTo(address) # LOBBY_QUIT is used for join rejection
             elif msgType == MessageType.LOBBY_QUIT:
                 if address in self.activePlayers:
                     print_debug('LobbyServer', 'Active player is quitting.')
