@@ -61,17 +61,17 @@ class Snake:
 
         if heading in (Dir.Right, Dir.Down):
             self.body = deque([
-                (headX - 3, headY),
-                (headX - 2, headY),
+                (headX, headY),
                 (headX - 1, headY),
-                (headX, headY)
+                (headX - 2, headY),
+                (headX - 3, headY)
                 ])
         else: # heading in (Dir.Left, Dir.Up)
             self.body = deque([
-                (headX + 3, headY),
-                (headX + 2, headY),
+                (headX, headY),
                 (headX + 1, headY),
-                (headX, headY)
+                (headX + 2, headY),
+                (headX + 3, headY)
                 ])
 
         self.heading = heading
@@ -113,13 +113,13 @@ class Snake:
         else: # self.heading == Dir.Down
             self.headPos = (self.headPos[0], self.headPos[1] + 1)
 
-        self.body.append(self.headPos)
+        self.body.appendleft(self.headPos)
 
         # pop the last body segment unless the snake is supposed to grow
         if self.shouldGrow == True:
             self.shouldGrow = False
         else:
-            self.body.popleft()
+            self.body.pop()
 
         if self.nextHeading:
             self.heading = self.nextHeading
