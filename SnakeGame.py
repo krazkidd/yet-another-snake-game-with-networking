@@ -45,10 +45,10 @@ class SnakeGame:
         startPos = [
             (width/4, height/4),
             (width - width/4, height/4),
-            (width/4, height - height/4),
-            (width - width/4, height - height/4)
+            (width - width/4, height - height/4),
+            (width/4, height - height/4)
             ]
-        startDir = [Dir.Right, Dir.Down, Dir.Left, Dir.Up]
+        startDir = [Dir.Right, Dir.Left, Dir.Left, Dir.Right]
 
         count = 0
 

@@ -59,14 +59,15 @@ class Snake:
     def __init__(self, headX, headY, heading):
         self.headPos = (headX, headY)
 
-        if heading in (Dir.Right, Dir.Down):
+        #TODO need to add cases for Up and Down
+        if heading == Dir.Right:
             self.body = deque([
                 (headX, headY),
                 (headX - 1, headY),
                 (headX - 2, headY),
                 (headX - 3, headY)
                 ])
-        else: # heading in (Dir.Left, Dir.Up)
+        elif heading == Dir.Left:
             self.body = deque([
                 (headX, headY),
                 (headX + 1, headY),
