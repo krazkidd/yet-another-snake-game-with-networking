@@ -60,8 +60,11 @@ def ShowMessage(msg):
 
 def ShowMOTD(host, motd, lobbyList):
     Erase()
+
     h, w = GetWindowSize()
-    stdscr.addstr(2, max(0, w / 2 - len(motd) / 2), motd)
+
+    if motd:
+        stdscr.addstr(2, max(0, w / 2 - len(motd) / 2), motd)
 
     if lobbyList:
         listHdr = 'There are currently ' + str(len(lobbyList)) + ' lobbies on this server (' + host[0] + '):'
