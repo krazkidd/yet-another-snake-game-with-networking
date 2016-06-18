@@ -21,11 +21,26 @@
 #  
 # *************************************************************************
 
+import curses
+import curses.ascii
+
 ################ CLIENT CONFIG VARS ################
 
 # which server to connect to
 HOST = '127.0.0.1'
 
+# key bindings
+KEYS_LOBBY_QUIT = (ord('Q'), ord('q'), curses.ascii.ESC)
+KEYS_LOBBY_REFRESH = (ord('R'), ord('r'))
+KEYS_LOBBY_READY = (ord('X'), ord('x'))
+KEYS_LOBBY_1PLAYER = (ord('Y'), ord('y'))
+
+KEYS_GAME_QUIT = (curses.ascii.ESC)
+
+KEYS_MV_LEFT = (ord('H'), ord('h'), curses.KEY_LEFT)
+KEYS_MV_DOWN = (ord('J'), ord('j',), curses.KEY_DOWN)
+KEYS_MV_UP = (ord('K'), ord('k',), curses.KEY_UP)
+KEYS_MV_RIGHT = (ord('L'), ord('l',), curses.KEY_RIGHT)
 
 ################ SERVER CONFIG VARS ################
 
@@ -43,4 +58,10 @@ NUM_LOBBIES = 1
 
 # game window dimensions (units are text cells)
 WIN_WIDTH, WIN_HEIGHT = 60, 35
+
+
+################# GAME CONFIG VARS #################
+
+# how often to advance the game state #
+STEP_TIME = 0.1
 

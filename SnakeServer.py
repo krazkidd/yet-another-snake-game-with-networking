@@ -36,6 +36,7 @@ class LobbyServer:
     def __init__(self, lobbyNum):
         # unique server ID #
         self.lobbyNum = lobbyNum
+        self.connectPort = SnakeNet.InitServerSocket()
 
         self.serverState = None
 
@@ -46,20 +47,27 @@ class LobbyServer:
 
         self.game = None
 
-        self.connectPort = SnakeNet.InitLobbyServerSocket()
+        self.sockTimeout = None
 
     def start(self):
+        print 'Lobby server ' + str(self.lobbyNum) + ' has started on port ' + str(self.connectPort) + '. Waiting for clients...'
+
         self.startLobbyMode()
+
+        tickTime = 0
 
         try:
             while True:
-                readable, writable, exceptional = select.select([SnakeNet.sock], [], [], 0.005)
+                readable, writable, exceptional = select.select([SnakeNet.sock], [], [], self.sockTimeout)
 
                 if SnakeNet.sock in readable:
                     self.handleNetMessage()
-                else:
-                    #TODO manage clients and game
-                    pass
+
+                if self.serverState == GameState.GAME:
+                    tickTime += self.sockTimeout
+                    if tickTime >= STEP_TIME:
+                        tickTime -= STEP_TIME
+                        self.game.tick()
         except BaseException as e:
             print_err('LobbyServer', str(self.lobbyNum) + ': ' + str(e))
         finally:
@@ -68,72 +76,65 @@ class LobbyServer:
     def handleNetMessage(self):
         address, msgType, msgBody = SnakeNet.UnpackMessage()
 
-        if self.serverState == GameState.LOBBY:
-            if msgType == MessageType.HELLO:
-                SnakeNet.SendHelloMessageTo(address)
-            elif msgType == MessageType.LOBBY_JOIN:
-                if address in self.activePlayers or len(self.activePlayers) < SnakeGame.MAX_PLAYERS:
-                    print_debug('LobbyServer', 'Woohoo! We got a new client!')
+        if address in self.activePlayers:
+            if self.serverState == GameState.LOBBY:
+                if msgType == MessageType.LOBBY_JOIN:
                     SnakeNet.SendLobbyJoinRequestTo(address) # LOBBY_JOIN is used for join confirmation
-                    self.activePlayers[address] = (MessageType.NOT_READY, None)
-                    print_debug('LobbyServer', 'Lobby has ' + str(len(self.activePlayers)) + ' players.')
-                else:
-                    print_debug('LobbyServer', 'Lobby full. New client rejected.')
-                    SnakeNet.SendQuitMessageTo(address) # LOBBY_QUIT is used for join rejection
-            elif msgType == MessageType.LOBBY_QUIT:
-                if address in self.activePlayers:
-                    print_debug('LobbyServer', 'Active player is quitting.')
+                    self.activePlayers[address] = (MessageType.NOT_READY, None) # reset READY status
+                elif msgType == MessageType.LOBBY_QUIT:
                     del self.activePlayers[address]
-            elif msgType == MessageType.READY:
-                if address in self.activePlayers:
+                elif msgType == MessageType.READY:
                     self.activePlayers[address] = (MessageType.READY, None)
                     allReady = True
-                    for addr in self.activePlayers:
-                        allReady = allReady and self.activePlayers[addr][0] == MessageType.READY
+                    for addr, playerTuple in self.activePlayers.iteritems():
+                        allReady = allReady and playerTuple[0] == MessageType.READY
                     if allReady:
                         self.startGameMode()
-        elif self.serverState == GameState.GAME and (address in self.activePlayers):
-            #TODO pass message to game
-            pass
+            elif self.serverState == GameState.GAME:
+                #TODO pass message to game
+                pass
+        else: # address not in self.activePlayers
+            if self.serverState == GameState.LOBBY:
+                if msgType == MessageType.HELLO:
+                    SnakeNet.SendHelloMessageTo(address)
+                elif msgType == MessageType.LOBBY_JOIN:
+                    if len(self.activePlayers) < SnakeGame.MAX_PLAYERS:
+                        SnakeNet.SendLobbyJoinRequestTo(address) # LOBBY_JOIN is used for join confirmation
+                        self.activePlayers[address] = (MessageType.NOT_READY, None)
+                    else:
+                        SnakeNet.SendQuitMessageTo(address) # LOBBY_QUIT is used for join rejection
 
     def startLobbyMode(self):
         self.serverState = GameState.LOBBY
+        self.sockTimeout = None
 
     def startGameMode(self):
         self.serverState = GameState.GAME
 
         self.game = SnakeGame.SnakeGame(WIN_WIDTH, WIN_HEIGHT, len(self.activePlayers))
 
-        for addr in self.activePlayers:
-            SnakeNet.SendSetupMessage(addr)
-
-        for addr in self.activePlayers:
-            SnakeNet.SendStartMessage(addr)
+        #TODO start sending game setup messages
 
 class MainServer:
     @staticmethod
     def start():
-        pid = 0
         # start lobbies as separate processes
         lobbies = []
-        for i in range(1, 1 + NUM_LOBBIES):
+        for i in range(1, NUM_LOBBIES + 1):
             lobby = LobbyServer(i)
-            lobbies.append(lobby)
             pid = os.fork()
             if pid == 0:
-                lobbies = None
                 lobby.start()
-                sys.exit(0) # end lobby process if it ever exits
+                sys.exit(0)
+            lobbies.append(lobby)
 
-        print_debug('MainServer', str(len(lobbies)) + ' lobbies started.')
-
-        SnakeNet.InitMainServerSocket()
+        SnakeNet.InitServerSocket(SERVER_PORT)
 
         print 'Main server has started on port ' + str(SERVER_PORT) + '. Waiting for clients...'
 
         try:
             while True:
-                address, msgType = SnakeNet.WaitForClient()
+                address, msgType, msgBody = SnakeNet.UnpackMessage()
 
                 if msgType == MessageType.HELLO:
                     SnakeNet.SendMOTDTo(address)
@@ -143,8 +144,4 @@ class MainServer:
             print_err('MainServer', str(e))
         finally:
             SnakeNet.CloseSocket()
-            sys.exit(1)
-
-        SnakeNet.CloseSocket()
-        sys.exit(0)
 

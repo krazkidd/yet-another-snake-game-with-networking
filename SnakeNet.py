@@ -54,12 +54,33 @@ STRUCT_FMT_GAME_UPDATE = '!IB'
 
 sock = None
 
+def InitServerSocket(port=0):
+    global sock
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind(('localhost', port))
+
+    return sock.getsockname()[1] # return port
+
+def InitClientSocket():
+    global sock
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+def CloseSocket():
+    if sock:
+        sock.close()
+
+def UnpackMessage():
+    msg, address = sock.recvfrom(MAX_MSG_SIZE)
+    msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
+    #TODO verify msg size!
+    if len(msg) > calcsize(STRUCT_FMT_HDR):
+        return address, msgType, msg[calcsize(STRUCT_FMT_HDR):]
+    else:
+        return address, msgType, None
+
 def SendMOTDTo(address):
     buf = pack(STRUCT_FMT_HDR, MessageType.MOTD, calcsize(STRUCT_FMT_HDR) + len(MOTD))
     buf += MOTD
-
-    print_debug('SnakeNet', 'Sending MOTD to ' + address[0] + '.')
-
     sock.sendto(buf, address)
 
 def SendLobbyListTo(address, lobbies):
@@ -67,8 +88,6 @@ def SendLobbyListTo(address, lobbies):
     buf += pack(STRUCT_FMT_LOBBY_COUNT, len(lobbies))
     for lobby in lobbies:
         buf += pack(STRUCT_FMT_LOBBY, lobby.lobbyNum, lobby.connectPort)
-
-    print_debug('SnakeNet', str(len(lobbies)) + ' lobbies sent to ' + address[0] + '.')
 
     sock.sendto(buf, address)
 
@@ -78,8 +97,7 @@ def UnpackLobbyList(msgBody):
 
     lobbyList = []
     for i in range(lobbyCount):
-        lobbyNum, lobbyPort = unpack(STRUCT_FMT_LOBBY, packedLobbies[i * calcsize(STRUCT_FMT_LOBBY):i * calcsize(STRUCT_FMT_LOBBY) + calcsize(STRUCT_FMT_LOBBY)])
-        lobbyList.append((lobbyNum, lobbyPort))
+        lobbyList.append(unpack(STRUCT_FMT_LOBBY, packedLobbies[i * calcsize(STRUCT_FMT_LOBBY):i * calcsize(STRUCT_FMT_LOBBY) + calcsize(STRUCT_FMT_LOBBY)]))
 
     return lobbyList
 
@@ -93,10 +111,8 @@ def SendHelloMessage():
     sock.sendto(pack(STRUCT_FMT_HDR, MessageType.HELLO, calcsize(STRUCT_FMT_HDR)), (HOST, SERVER_PORT))
 
 def SendQuitMessageTo(address):
-    sock.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_QUIT, calcsize(STRUCT_FMT_HDR)), address)
-
-def IsServer(address):
-    return address[0] == HOST and address[1] == SERVER_PORT
+    if address:
+        sock.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_QUIT, calcsize(STRUCT_FMT_HDR)), address)
 
 def SendLobbyListRequest():
     sock.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_REQ, calcsize(STRUCT_FMT_HDR)), (HOST, SERVER_PORT))
@@ -112,52 +128,3 @@ def SendGameUpdateTo(address, packedUpdate):
     msg += packedUpdate
     sock.sendto(msg, address)
 
-def WaitForClient():
-    msg, address = sock.recvfrom(MAX_MSG_SIZE)
-    #FIXME we get an exception if the input isn't of the expected size, so we need to check msg length
-    msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
-    return address, msgType
-
-def InitMainServerSocket():
-    global sock
-
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind(('localhost', SERVER_PORT))
-
-    print_debug('SnakeNet', 'Initializing server socket on port ' + str(sock.getsockname()[1]) + '.')
-
-def InitLobbyServerSocket():
-    global sock
-
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind(('localhost', 0)) # 0 = random port
-    sock.setblocking(0) # 0 = non-blocking
-
-    print_debug('SnakeNet', 'Initializing server socket on port ' + str(sock.getsockname()[1]) + '.')
-
-    return sock.getsockname()[1]
-
-def InitClientSocket():
-    global sock
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-def CloseSocket():
-    if sock:
-        sock.close()
-
-def CheckForMessage():
-    # NOTE: We use select() simply so we don't have to do our own timeout on the socket.
-    readable, writable, exceptional = select([sock], [], [], 0.005)
-
-    if sock in readable:
-        msg, address = sock.recvfrom(MAX_MSG_SIZE)
-        msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
-        return address, msgType, msg[calcsize(STRUCT_FMT_HDR):]
-    else:
-        return None, MessageType.NONE, None
-
-def UnpackMessage():
-    msg, address = sock.recvfrom(MAX_MSG_SIZE)
-    msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
-    #TODO verify msg size!
-    return address, msgType, msg[calcsize(STRUCT_FMT_HDR):]
