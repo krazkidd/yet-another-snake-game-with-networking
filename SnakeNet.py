@@ -73,7 +73,7 @@ def SendLobbyListTo(address, lobbies):
     sock.sendto(buf, address)
 
 def UnpackLobbyList(msgBody):
-    lobbyCount = int(unpack(STRUCT_FMT_LOBBY_COUNT, msgBody[calcsize(STRUCT_FMT_LOBBY_COUNT)])[0])
+    lobbyCount = unpack(STRUCT_FMT_LOBBY_COUNT, msgBody[:calcsize(STRUCT_FMT_LOBBY_COUNT)])[0]
     packedLobbies = msgBody[calcsize(STRUCT_FMT_LOBBY_COUNT):]
 
     lobbyList = []
