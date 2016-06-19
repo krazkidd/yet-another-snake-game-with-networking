@@ -85,23 +85,23 @@ def handleNetMessage():
 
     if address == lobbyAddr:
         if clientState == GameState.MOTD:
-            if msgType == MessageType.LOBBY_JOIN:
+            if msgType == MsgType.LOBBY_JOIN:
                 startLobbyMode()
-            elif msgType == MessageType.LOBBY_QUIT:
+            elif msgType == MsgType.LOBBY_QUIT:
                 SnakeCurses.ShowDebug('Lobby rejected your join request.')
                 startMOTDMode()
         elif clientState == GameState.LOBBY:
-            if msgType == MessageType.START:
+            if msgType == MsgType.START:
                 startGameMode()
         elif clientState == GameState.GAME:
             #TODO pass message to game
             pass
     elif address == mainSrvAddr:
         if clientState == GameState.MOTD:
-            if msgType == MessageType.MOTD:
+            if msgType == MsgType.MOTD:
                 motd = msgBody
                 SnakeCurses.ShowMOTD(address, motd, lobbyList)
-            elif msgType == MessageType.LOBBY_REP:
+            elif msgType == MsgType.LOBBY_REP:
                 lobbyList = SnakeNet.UnpackLobbyList(msgBody)
                 SnakeCurses.ShowMOTD(address, motd, lobbyList)
 

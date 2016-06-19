@@ -22,13 +22,32 @@
 # *************************************************************************
 
 class Dir:
-        """An enum of the cardinal directions."""
-        Up, Down, Left, Right = range(4)
+    """An enum of the cardinal directions."""
+    Up, Down, Left, Right = range(4)
 
 class GameState:
     MOTD, LOBBY, GAME_SETUP, GAME, GAME_OVER = range(5)
 
-class MessageType:
+class MsgType:
     """Enum for Snake network messages"""
     NONE, HELLO, MOTD, LOBBY_REQ, LOBBY_REP, LOBBY_JOIN, LOBBY_QUIT, READY, NOT_READY, START, UPDATE, CHAT, SETUP = range(13)
+
+class MsgFmt:
+    # net message header
+    # B: message type
+    # H: length of message (including header)
+    HDR = '!BH'
+
+    # number of lobbies
+    LBY_CNT = '!B'
+
+    # info for single lobby
+    # B: lobby number
+    # H: port number
+    LBY = '!BH'
+
+    # game update message
+    # I: tick num of update (game time elapsed)
+    # B: new heading of player's snake
+    GAME_UPDATE = '!IB'
 

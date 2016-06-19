@@ -41,7 +41,7 @@ class LobbyServer:
         self.serverState = None
 
         # activePlayers maps net addresses to tuples of (X, Y) where:
-        #   X: ready status (MessageType.{NOT_,}READY)
+        #   X: ready status (MsgType.{NOT_,}READY)
         #   Y: Snake object when a game is running
         self.activePlayers = dict()
 
@@ -78,16 +78,16 @@ class LobbyServer:
 
         if address in self.activePlayers:
             if self.serverState == GameState.LOBBY:
-                if msgType == MessageType.LOBBY_JOIN:
+                if msgType == MsgType.LOBBY_JOIN:
                     SnakeNet.SendLobbyJoinRequest(address) # LOBBY_JOIN is used for join confirmation
-                    self.activePlayers[address] = (MessageType.NOT_READY, None) # reset READY status
-                elif msgType == MessageType.LOBBY_QUIT:
+                    self.activePlayers[address] = (MsgType.NOT_READY, None) # reset READY status
+                elif msgType == MsgType.LOBBY_QUIT:
                     del self.activePlayers[address]
-                elif msgType == MessageType.READY:
-                    self.activePlayers[address] = (MessageType.READY, None)
+                elif msgType == MsgType.READY:
+                    self.activePlayers[address] = (MsgType.READY, None)
                     allReady = True
                     for addr, playerTuple in self.activePlayers.iteritems():
-                        allReady = allReady and playerTuple[0] == MessageType.READY
+                        allReady = allReady and playerTuple[0] == MsgType.READY
                     if allReady:
                         self.startGameMode()
             elif self.serverState == GameState.GAME:
@@ -95,10 +95,10 @@ class LobbyServer:
                 pass
         else: # address not in self.activePlayers
             if self.serverState == GameState.LOBBY:
-                if msgType == MessageType.LOBBY_JOIN:
+                if msgType == MsgType.LOBBY_JOIN:
                     if len(self.activePlayers) < SnakeGame.MAX_PLAYERS:
                         SnakeNet.SendLobbyJoinRequest(address) # LOBBY_JOIN is used for join confirmation
-                        self.activePlayers[address] = (MessageType.NOT_READY, None)
+                        self.activePlayers[address] = (MsgType.NOT_READY, None)
                     else:
                         SnakeNet.SendQuitMessage(address) # LOBBY_QUIT is used for join rejection
 
@@ -135,9 +135,9 @@ class MainServer:
             while True:
                 address, msgType, msgBody = SnakeNet.ReceiveMessage()
 
-                if msgType == MessageType.HELLO:
+                if msgType == MsgType.HELLO:
                     SnakeNet.SendMOTD(address)
-                elif msgType == MessageType.LOBBY_REQ:
+                elif msgType == MsgType.LOBBY_REQ:
                     SnakeNet.SendLobbyList(address, lobbies)
         except BaseException as e:
             print_err('MainServer', str(e))

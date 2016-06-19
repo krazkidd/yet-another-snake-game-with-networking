@@ -34,24 +34,6 @@ from SnakeEnums import *
 
 MAX_MSG_SIZE = 1024
 
-# net message header
-# B: message type
-# H: length of message (including header)
-STRUCT_FMT_HDR = '!BH'
-
-# number of lobbies
-STRUCT_FMT_LOBBY_COUNT = '!B'
-
-# info for single lobby
-# B: lobby number
-# H: port number
-STRUCT_FMT_LOBBY = '!BH'
-
-# game update message
-# I: tick num of update (game time elapsed)
-# B: new heading of player's snake
-STRUCT_FMT_GAME_UPDATE = '!IB'
-
 sock = None
 
 def InitServerSocket(port=0):
@@ -72,60 +54,60 @@ def CloseSocket():
 def SendMessage(address, msgType, msgBody=None):
     buf = None
     if msgBody:
-        buf = pack(STRUCT_FMT_HDR, msgType, calcsize(STRUCT_FMT_HDR) + len(msgBody))
+        buf = pack(MsgFmt.HDR, msgType, calcsize(MsgFmt.HDR) + len(msgBody))
         buf += msgBody
     else:
-        buf = pack(STRUCT_FMT_HDR, msgType, calcsize(STRUCT_FMT_HDR))
+        buf = pack(MsgFmt.HDR, msgType, calcsize(MsgFmt.HDR))
 
     sock.sendto(buf, address)
 
 def ReceiveMessage():
     msg, address = sock.recvfrom(MAX_MSG_SIZE)
-    msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
+    msgType, msgLen = unpack(MsgFmt.HDR, msg[:calcsize(MsgFmt.HDR)])
     #TODO verify msg size!
-    if len(msg) > calcsize(STRUCT_FMT_HDR):
-        return address, msgType, msg[calcsize(STRUCT_FMT_HDR):]
+    if len(msg) > calcsize(MsgFmt.HDR):
+        return address, msgType, msg[calcsize(MsgFmt.HDR):]
     else:
         return address, msgType, None
 
+def SendHelloMessage(address):
+    SendMessage(address, MsgType.HELLO)
+
 def SendMOTD(address):
-    SendMessage(address, MessageType.MOTD, MOTD)
+    SendMessage(address, MsgType.MOTD, MOTD)
+
+def SendQuitMessage(address):
+    SendMessage(address, MsgType.LOBBY_QUIT)
+
+def SendLobbyListRequest(address):
+    SendMessage(address, MsgType.LOBBY_REQ)
 
 def SendLobbyList(address, lobbies):
-    buf = pack(STRUCT_FMT_LOBBY_COUNT, len(lobbies))
+    buf = pack(MsgFmt.LBY_CNT, len(lobbies))
     for lobby in lobbies:
-        buf += pack(STRUCT_FMT_LOBBY, lobby.lobbyNum, lobby.connectPort)
+        buf += pack(MsgFmt.LBY, lobby.lobbyNum, lobby.connectPort)
 
-    SendMessage(address, MessageType.LOBBY_REP, buf)
+    SendMessage(address, MsgType.LOBBY_REP, buf)
 
 def UnpackLobbyList(msgBody):
-    lobbyCount = unpack(STRUCT_FMT_LOBBY_COUNT, msgBody[:calcsize(STRUCT_FMT_LOBBY_COUNT)])[0]
-    packedLobbies = msgBody[calcsize(STRUCT_FMT_LOBBY_COUNT):]
+    lobbyCount = unpack(MsgFmt.LBY_CNT, msgBody[:calcsize(MsgFmt.LBY_CNT)])[0]
+    packedLobbies = msgBody[calcsize(MsgFmt.LBY_CNT):]
 
     lobbyList = []
     for i in range(lobbyCount):
-        lobbyList.append(unpack(STRUCT_FMT_LOBBY, packedLobbies[i * calcsize(STRUCT_FMT_LOBBY):i * calcsize(STRUCT_FMT_LOBBY) + calcsize(STRUCT_FMT_LOBBY)]))
+        lobbyList.append(unpack(MsgFmt.LBY, packedLobbies[i * calcsize(MsgFmt.LBY):i * calcsize(MsgFmt.LBY) + calcsize(MsgFmt.LBY)]))
 
     return lobbyList
 
-def SendSetupMessage(address):
-    SendMessage(address, MessageType.SETUP)
-
-def SendStartMessage(address):
-    SendMessage(address, MessageType.START)
-
-def SendHelloMessage(address):
-    SendMessage(address, MessageType.HELLO)
-
-def SendQuitMessage(address):
-    SendMessage(address, MessageType.LOBBY_QUIT)
-
-def SendLobbyListRequest(address):
-    SendMessage(address, MessageType.LOBBY_REQ)
-
 def SendLobbyJoinRequest(address):
-    SendMessage(address, MessageType.LOBBY_JOIN)
+    SendMessage(address, MsgType.LOBBY_JOIN)
 
 def SendReadyMessage(address):
-    SendMessage(address, MessageType.READY)
+    SendMessage(address, MsgType.READY)
+
+def SendSetupMessage(address):
+    SendMessage(address, MsgType.SETUP)
+
+def SendStartMessage(address):
+    SendMessage(address, MsgType.START)
 
