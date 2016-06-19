@@ -74,12 +74,12 @@ class LobbyServer:
             SnakeNet.CloseSocket()
 
     def handleNetMessage(self):
-        address, msgType, msgBody = SnakeNet.UnpackMessage()
+        address, msgType, msgBody = SnakeNet.ReceiveMessage()
 
         if address in self.activePlayers:
             if self.serverState == GameState.LOBBY:
                 if msgType == MessageType.LOBBY_JOIN:
-                    SnakeNet.SendLobbyJoinRequestTo(address) # LOBBY_JOIN is used for join confirmation
+                    SnakeNet.SendLobbyJoinRequest(address) # LOBBY_JOIN is used for join confirmation
                     self.activePlayers[address] = (MessageType.NOT_READY, None) # reset READY status
                 elif msgType == MessageType.LOBBY_QUIT:
                     del self.activePlayers[address]
@@ -95,14 +95,12 @@ class LobbyServer:
                 pass
         else: # address not in self.activePlayers
             if self.serverState == GameState.LOBBY:
-                if msgType == MessageType.HELLO:
-                    SnakeNet.SendHelloMessageTo(address)
-                elif msgType == MessageType.LOBBY_JOIN:
+                if msgType == MessageType.LOBBY_JOIN:
                     if len(self.activePlayers) < SnakeGame.MAX_PLAYERS:
-                        SnakeNet.SendLobbyJoinRequestTo(address) # LOBBY_JOIN is used for join confirmation
+                        SnakeNet.SendLobbyJoinRequest(address) # LOBBY_JOIN is used for join confirmation
                         self.activePlayers[address] = (MessageType.NOT_READY, None)
                     else:
-                        SnakeNet.SendQuitMessageTo(address) # LOBBY_QUIT is used for join rejection
+                        SnakeNet.SendQuitMessage(address) # LOBBY_QUIT is used for join rejection
 
     def startLobbyMode(self):
         self.serverState = GameState.LOBBY
@@ -110,6 +108,7 @@ class LobbyServer:
 
     def startGameMode(self):
         self.serverState = GameState.GAME
+        self.sockTimeout = 0.005
 
         self.game = SnakeGame.SnakeGame(WIN_WIDTH, WIN_HEIGHT, len(self.activePlayers))
 
@@ -134,12 +133,12 @@ class MainServer:
 
         try:
             while True:
-                address, msgType, msgBody = SnakeNet.UnpackMessage()
+                address, msgType, msgBody = SnakeNet.ReceiveMessage()
 
                 if msgType == MessageType.HELLO:
-                    SnakeNet.SendMOTDTo(address)
+                    SnakeNet.SendMOTD(address)
                 elif msgType == MessageType.LOBBY_REQ:
-                    SnakeNet.SendLobbyListTo(address, lobbies)
+                    SnakeNet.SendLobbyList(address, lobbies)
         except BaseException as e:
             print_err('MainServer', str(e))
         finally:

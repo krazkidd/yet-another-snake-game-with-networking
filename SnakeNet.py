@@ -69,7 +69,17 @@ def CloseSocket():
     if sock:
         sock.close()
 
-def UnpackMessage():
+def SendMessage(address, msgType, msgBody=None):
+    buf = None
+    if msgBody:
+        buf = pack(STRUCT_FMT_HDR, msgType, calcsize(STRUCT_FMT_HDR) + len(msgBody))
+        buf += msgBody
+    else:
+        buf = pack(STRUCT_FMT_HDR, msgType, calcsize(STRUCT_FMT_HDR))
+
+    sock.sendto(buf, address)
+
+def ReceiveMessage():
     msg, address = sock.recvfrom(MAX_MSG_SIZE)
     msgType, msgLen = unpack(STRUCT_FMT_HDR, msg[:calcsize(STRUCT_FMT_HDR)])
     #TODO verify msg size!
@@ -78,18 +88,15 @@ def UnpackMessage():
     else:
         return address, msgType, None
 
-def SendMOTDTo(address):
-    buf = pack(STRUCT_FMT_HDR, MessageType.MOTD, calcsize(STRUCT_FMT_HDR) + len(MOTD))
-    buf += MOTD
-    sock.sendto(buf, address)
+def SendMOTD(address):
+    SendMessage(address, MessageType.MOTD, MOTD)
 
-def SendLobbyListTo(address, lobbies):
-    buf = pack(STRUCT_FMT_HDR, MessageType.LOBBY_REP, calcsize(STRUCT_FMT_HDR) + calcsize(STRUCT_FMT_LOBBY_COUNT) + calcsize(STRUCT_FMT_LOBBY) * len(lobbies))
-    buf += pack(STRUCT_FMT_LOBBY_COUNT, len(lobbies))
+def SendLobbyList(address, lobbies):
+    buf = pack(STRUCT_FMT_LOBBY_COUNT, len(lobbies))
     for lobby in lobbies:
         buf += pack(STRUCT_FMT_LOBBY, lobby.lobbyNum, lobby.connectPort)
 
-    sock.sendto(buf, address)
+    SendMessage(address, MessageType.LOBBY_REP, buf)
 
 def UnpackLobbyList(msgBody):
     lobbyCount = unpack(STRUCT_FMT_LOBBY_COUNT, msgBody[:calcsize(STRUCT_FMT_LOBBY_COUNT)])[0]
@@ -102,29 +109,23 @@ def UnpackLobbyList(msgBody):
     return lobbyList
 
 def SendSetupMessage(address):
-    sock.sendto(pack(STRUCT_FMT_HDR, MessageType.SETUP, calcsize(STRUCT_FMT_HDR)), address)
+    SendMessage(address, MessageType.SETUP)
 
 def SendStartMessage(address):
-    sock.sendto(pack(STRUCT_FMT_HDR, MessageType.START, calcsize(STRUCT_FMT_HDR)), address)
+    SendMessage(address, MessageType.START)
 
-def SendHelloMessage():
-    sock.sendto(pack(STRUCT_FMT_HDR, MessageType.HELLO, calcsize(STRUCT_FMT_HDR)), (HOST, SERVER_PORT))
+def SendHelloMessage(address):
+    SendMessage(address, MessageType.HELLO)
 
-def SendQuitMessageTo(address):
-    if address:
-        sock.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_QUIT, calcsize(STRUCT_FMT_HDR)), address)
+def SendQuitMessage(address):
+    SendMessage(address, MessageType.LOBBY_QUIT)
 
-def SendLobbyListRequest():
-    sock.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_REQ, calcsize(STRUCT_FMT_HDR)), (HOST, SERVER_PORT))
+def SendLobbyListRequest(address):
+    SendMessage(address, MessageType.LOBBY_REQ)
 
-def SendLobbyJoinRequestTo(address):
-    sock.sendto(pack(STRUCT_FMT_HDR, MessageType.LOBBY_JOIN, calcsize(STRUCT_FMT_HDR)), address)
+def SendLobbyJoinRequest(address):
+    SendMessage(address, MessageType.LOBBY_JOIN)
 
-def SendReadyMessageTo(address):
-    sock.sendto(pack(STRUCT_FMT_HDR, MessageType.READY, calcsize(STRUCT_FMT_HDR)), address)
-
-def SendGameUpdateTo(address, packedUpdate):
-    msg = pack(STRUCT_FMT_HDR, MessageType.UPDATE, calcsize(STRUCT_FMT_HDR) + calcsize(STRUCT_FMT_GAME_UPDATE))
-    msg += packedUpdate
-    sock.sendto(msg, address)
+def SendReadyMessage(address):
+    SendMessage(address, MessageType.READY)
 
