@@ -56,24 +56,20 @@ class Snake:
 
     """
 
-    def __init__(self, headX, headY, heading):
+    def __init__(self, headX, headY, heading, length=4):
         self.headPos = (headX, headY)
 
-        #TODO need to add cases for Up and Down
-        if heading == Dir.Right:
-            self.body = deque([
-                (headX, headY),
-                (headX - 1, headY),
-                (headX - 2, headY),
-                (headX - 3, headY)
-                ])
-        elif heading == Dir.Left:
-            self.body = deque([
-                (headX, headY),
-                (headX + 1, headY),
-                (headX + 2, headY),
-                (headX + 3, headY)
-                ])
+        self.body = deque([self.headPos])
+
+        for i in range(1, length):
+            if heading == Dir.Right:
+                self.body.append((headX - i, headY))
+            elif heading == Dir.Left:
+                self.body.append((headX + i, headY))
+            elif heading == Dir.Up:
+                self.body.append((headX, headY + i))
+            elif heading == Dir.Down:
+                self.body.append((headX, headY - i))
 
         self.heading = heading
         self.headingChanged = False
