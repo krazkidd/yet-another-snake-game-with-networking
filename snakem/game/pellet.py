@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+
 # -*- coding: utf-8 -*-
 
 # *************************************************************************
@@ -19,24 +19,28 @@
 #
 #  You should have received a copy of the GNU General Public License
 #  along with Snake-M.  If not, see <http://www.gnu.org/licenses/>.
-#  
+#
 # *************************************************************************
 
-import sys
+import random
 
-from os.path import basename
+class Pellet:
 
-import SnakeClient
-import SnakeServer
+    """This is what the Snake eats.
 
-def main():
-    # get program name and fork to server or client mode
-    if 'snakes' == basename(sys.argv[0]):
-        SnakeServer.MainServer.start()
-    elif 'snake' == basename(sys.argv[0]):
-        SnakeClient.start()
-    else:
-        print 'Usage: This program must be called via symlink with name `snake` (client) or `snakes` (server).'
+    Holds a randomized position."""
 
-if __name__ == "__main__":
-    main()
+    def __init__(self, minX, minY, maxX, maxY):
+
+        """On creation, randomly set a position using the
+        given arguments as maximum values."""
+
+        self.__minX = minX
+        self.__minY = minY
+        self.__maxX = maxX
+        self.__maxY = maxY
+
+        self.RandomizePosition()
+
+    def RandomizePosition(self):
+        self.pos = (random.randint(self.__minX, self.__maxX), random.randint(self.__minY, self.__maxY))

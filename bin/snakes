@@ -1,3 +1,4 @@
+#!/usr/bin/python2
 # -*- coding: utf-8 -*-
 
 # *************************************************************************
@@ -18,36 +19,32 @@
 #
 #  You should have received a copy of the GNU General Public License
 #  along with Snake-M.  If not, see <http://www.gnu.org/licenses/>.
-#  
+#
 # *************************************************************************
 
-class Dir:
-    """An enum of the cardinal directions."""
-    Up, Down, Left, Right = range(4)
+import sys
+import os
+import os.path
 
-class GameState:
-    MOTD, LOBBY, GAME_SETUP, GAME, GAME_OVER = range(5)
+def set_path():
+    """Add snakem package to sys.path the gpodder way.
 
-class MsgType:
-    """Enum for Snake network messages"""
-    NONE, HELLO, MOTD, LOBBY_REQ, LOBBY_REP, LOBBY_JOIN, LOBBY_QUIT, READY, NOT_READY, START, UPDATE, CHAT, SETUP = range(13)
+    Source: https://stackoverflow.com/q/3281495
+    """
+    
+    my_path = os.path.realpath(sys.argv[0])
+    my_dir = os.path.join(os.path.dirname(my_path), '..')
+    prefix = os.path.abspath(os.path.normpath(my_dir))
 
-class MsgFmt:
-    # net message header
-    # B: message type
-    # H: length of message (including header)
-    HDR = '!BH'
+    src_dir = os.path.join(prefix, 'snakem')
 
-    # number of lobbies
-    LBY_CNT = '!B'
+    if os.path.exists(os.path.join(src_dir, '__init__.py')):
+        # run snakem from local source folder (not installed)
+        sys.path.insert(0, prefix)
 
-    # info for single lobby
-    # B: lobby number
-    # H: port number
-    LBY = '!BH'
+if __name__ == '__main__':
+    set_path()
 
-    # game update message
-    # I: tick num of update (game time elapsed)
-    # B: new heading of player's snake
-    GAME_UPDATE = '!IB'
+    from snakem.role import server
 
+    server.MainServer.start()

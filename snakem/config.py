@@ -18,7 +18,7 @@
 #
 #  You should have received a copy of the GNU General Public License
 #  along with Snake-M.  If not, see <http://www.gnu.org/licenses/>.
-#  
+#
 # *************************************************************************
 
 import curses
@@ -33,7 +33,7 @@ HOST = '127.0.0.1'
 KEYS_LOBBY_QUIT = (ord('Q'), ord('q'), curses.ascii.ESC)
 KEYS_LOBBY_REFRESH = (ord('R'), ord('r'))
 KEYS_LOBBY_READY = (ord('X'), ord('x'))
-KEYS_LOBBY_1PLAYER = (ord('Y'), ord('y'))
+#KEYS_LOBBY_1PLAYER = (ord('Y'), ord('y'))
 
 KEYS_GAME_QUIT = (curses.ascii.ESC)
 
@@ -51,7 +51,7 @@ SERVER_PORT = 11845
 MOTD = 'Welcome to my Snake-M development server!'
 
 # number of lobby servers to spawn
-NUM_LOBBIES = 1
+NUM_LOBBIES = 5
 
 
 ########## (SERVER ONLY) GAME CONFIG VARS ##########
@@ -64,4 +64,6 @@ WIN_WIDTH, WIN_HEIGHT = 60, 35
 
 # how often to advance the game state #
 STEP_TIME = 0.1
+
+MAX_PLAYERS = 4
 

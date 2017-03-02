@@ -18,34 +18,13 @@
 #
 #  You should have received a copy of the GNU General Public License
 #  along with Snake-M.  If not, see <http://www.gnu.org/licenses/>.
-#  
+#
 # *************************************************************************
 
 import random
 from collections import deque
 
-from SnakeEnums import *
-
-class Pellet:
-
-    """This is what the Snake eats.
-
-    Holds a randomized position."""
-
-    def __init__(self, minX, minY, maxX, maxY):
-
-        """On creation, randomly set a position using the
-        given arguments as maximum values."""
-
-        self.__minX = minX
-        self.__minY = minY
-        self.__maxX = maxX
-        self.__maxY = maxY
-
-        self.RandomizePosition()
-
-    def RandomizePosition(self):
-        self.pos = (random.randint(self.__minX, self.__maxX), random.randint(self.__minY, self.__maxY))
+from snakem.enums import *
 
 class Snake:
 
@@ -59,7 +38,7 @@ class Snake:
     def __init__(self, headX, headY, heading, length=4):
         self.headPos = (headX, headY)
 
-        self.body = deque([self.headPos])
+        self.body = deque()
 
         for i in range(1, length):
             if heading == Dir.Right:
@@ -165,14 +144,10 @@ class Snake:
         This method can only check for collisions with Snake objects, 
         not walls or other obstacles."""
 
-        # when doing collision detection on self, we must ignore the
-        # head position already in the body deque
-        if self == otherSnake:
-            if self.body.count(self.body[-1]) > 1: # body[-1] gets the head pos.
-                return True
-        else:
-            if otherSnake.body.count(self.body[-1]) > 0:
-                return True
+        if self.headPos == otherSnake.headPos:
+            return not self == otherSnake
+        elif self.headPos in otherSnake.body:
+            return True
 
         return False
 
@@ -205,6 +180,7 @@ class SnakeAI(Snake):
         elif p.pos[1] > self.headPos[1]:
             desiredDir = Dir.Down
 
+        # if desired direction is backward, we have to turn first
         if not desiredDir == self.heading:
             if desiredDir in (Dir.Down, Dir.Up) and self.heading in (Dir.Down, Dir.Up):
                 if self.headPos[1] == 1:
@@ -218,20 +194,20 @@ class SnakeAI(Snake):
                         self.changeHeading(Dir.Right)
                     else:
                         self.changeHeading(Dir.Up)
-            else:
-                if desiredDir in (Dir.Left, Dir.Right) and self.heading in (Dir.Left, Dir.Right):
-                    if self.headPos[0] == 1:
+            elif desiredDir in (Dir.Left, Dir.Right) and self.heading in (Dir.Left, Dir.Right):
+                if self.headPos[0] == 1:
+                    self.changeHeading(Dir.Down)
+                #TODO pass gameboard instance or size so
+                #     we can check height
+                #elif self.headPos[1] = MAX_GAMEBOARD_WIDTH:
+                #    self.changeHeading(Dir.LEFT)
+                else:
+                    if random.randint(0, 1) == 0:
                         self.changeHeading(Dir.Down)
-                    #TODO pass gameboard instance or size so
-                    #     we can check height
-                    #elif self.headPos[1] = MAX_GAMEBOARD_WIDTH:
-                    #    self.changeHeading(Dir.LEFT)
                     else:
-                        if random.randint(0, 1) == 0:
-                            self.changeHeading(Dir.Down)
-                        else:
-                            self.changeHeading(Dir.Up)
+                        self.changeHeading(Dir.Up)
 
-            self.changeHeading(desiredDir)
+        self.changeHeading(desiredDir)
 
+        # do the actual movement
         Snake.move(self, p)

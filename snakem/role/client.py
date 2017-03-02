@@ -18,7 +18,7 @@
 #
 #  You should have received a copy of the GNU General Public License
 #  along with Snake-M.  If not, see <http://www.gnu.org/licenses/>.
-#  
+#
 # *************************************************************************
 
 import select
@@ -26,12 +26,13 @@ import sys
 
 import curses.ascii
 
-import SnakeCurses
-import SnakeGame
-import SnakeNet
-from SnakeConfig import *
-from SnakeDebug import *
-from SnakeEnums import *
+from snakem.game import display
+from snakem.game import game
+from snakem.net import net
+
+from snakem.config import *
+from snakem.test.debug import *
+from snakem.enums import *
 
 mainSrvAddr = (HOST, SERVER_PORT)
 motd = None
@@ -49,8 +50,8 @@ game = None
 sockTimeout = None
 
 def start():
-    SnakeNet.InitClientSocket()
-    SnakeCurses.InitClientWindow(startWithCurses)
+    net.InitClientSocket()
+    display.InitClientWindow(startWithCurses)
 
 def startWithCurses():
     startMOTDMode()
@@ -59,9 +60,9 @@ def startWithCurses():
 
     try:
         while True:
-            readable, writable, exceptional = select.select([SnakeNet.sock, sys.stdin], [], [], sockTimeout)
+            readable, writable, exceptional = select.select([net.sock, sys.stdin], [], [], sockTimeout)
 
-            if SnakeNet.sock in readable:
+            if net.sock in readable:
                 handleNetMessage()
 
             if sys.stdin in readable:
@@ -72,23 +73,23 @@ def startWithCurses():
                 if tickTime >= STEP_TIME:
                     tickTime -= STEP_TIME
                     game.tick()
-                    SnakeCurses.ShowGame(game)
+                    display.ShowGame(game)
     finally:
         if lobbyAddr:
-            SnakeNet.SendQuitMessage(lobbyAddr)
-        SnakeNet.CloseSocket()
+            net.SendQuitMessage(lobbyAddr)
+        net.CloseSocket()
 
 def handleNetMessage():
     global motd, lobbyList
 
-    address, msgType, msgBody = SnakeNet.ReceiveMessage()
+    address, msgType, msgBody = net.ReceiveMessage()
 
     if address == lobbyAddr:
         if clientState == GameState.MOTD:
             if msgType == MsgType.LOBBY_JOIN:
                 startLobbyMode()
             elif msgType == MsgType.LOBBY_QUIT:
-                SnakeCurses.ShowDebug('Lobby rejected your join request.')
+                display.ShowDebug('Lobby rejected your join request.')
                 startMOTDMode()
         elif clientState == GameState.LOBBY:
             if msgType == MsgType.START:
@@ -100,15 +101,15 @@ def handleNetMessage():
         if clientState == GameState.MOTD:
             if msgType == MsgType.MOTD:
                 motd = msgBody
-                SnakeCurses.ShowMOTD(address, motd, lobbyList)
+                display.ShowMOTD(address, motd, lobbyList)
             elif msgType == MsgType.LOBBY_REP:
-                lobbyList = SnakeNet.UnpackLobbyList(msgBody)
-                SnakeCurses.ShowMOTD(address, motd, lobbyList)
+                lobbyList = net.UnpackLobbyList(msgBody)
+                display.ShowMOTD(address, motd, lobbyList)
 
 def handleInput():
     global lobbyAddr
 
-    c = SnakeCurses.GetKey()
+    c = display.GetKey()
 
     if clientState == GameState.MOTD:
         if c in KEYS_LOBBY_QUIT:
@@ -117,23 +118,20 @@ def handleInput():
             selection = int(curses.ascii.unctrl(c))
             if selection >= 1 and selection <= len(lobbyList):
                 lobbyAddr = (mainSrvAddr[0], lobbyList[selection - 1][1])
-                SnakeNet.SendLobbyJoinRequest(lobbyAddr)
+                net.SendLobbyJoinRequest(lobbyAddr)
         elif c in KEYS_LOBBY_REFRESH:
-            SnakeNet.SendHelloMessage(mainSrvAddr)
-            SnakeNet.SendLobbyListRequest(mainSrvAddr)
-        elif c in KEYS_LOBBY_1PLAYER:
-            #TODO this is a temp hack to start single player game
-            startGameMode()
+            net.SendHelloMessage(mainSrvAddr)
+            net.SendLobbyListRequest(mainSrvAddr)
     elif clientState == GameState.LOBBY:
         if c in KEYS_LOBBY_QUIT:
-            SnakeNet.SendQuitMessage(lobbyAddr)
+            net.SendQuitMessage(lobbyAddr)
             startMOTDMode()
         elif c in KEYS_LOBBY_READY:
-            SnakeNet.SendReadyMessage(lobbyAddr)
+            net.SendReadyMessage(lobbyAddr)
     elif clientState == GameState.GAME:
         if c == KEYS_GAME_QUIT:
             #TODO make it harder to quit running game
-            SnakeNet.SendQuitMessage(lobbyAddr)
+            net.SendQuitMessage(lobbyAddr)
             startMOTDMode()
         elif c in KEYS_MV_LEFT:
             game.snakes[0].changeHeading(Dir.Left)
@@ -152,17 +150,17 @@ def startMOTDMode():
     clientState  = GameState.MOTD
     lobbyAddr = None
 
-    SnakeNet.SendHelloMessage(mainSrvAddr)
-    SnakeNet.SendLobbyListRequest(mainSrvAddr)
+    net.SendHelloMessage(mainSrvAddr)
+    net.SendLobbyListRequest(mainSrvAddr)
 
-    SnakeCurses.ShowMessage('Contacting server at ' + mainSrvAddr[0] + ':' + str(mainSrvAddr[1]) + ' . . .')
+    display.ShowMessage('Contacting server at ' + mainSrvAddr[0] + ':' + str(mainSrvAddr[1]) + ' . . .')
 
 def startLobbyMode():
     global clientState, sockTimeout
     clientState = GameState.LOBBY
     sockTimeout = None
 
-    SnakeCurses.ShowLobby()
+    display.ShowLobby()
 
 def startGameMode():
     global clientState, sockTimeout, game
@@ -170,9 +168,9 @@ def startGameMode():
     sockTimeout = 0.005
 
     #TODO get win width/height from server
-    #game = SnakeGame.SnakeGame(WIN_WIDTH, WIN_HEIGHT, 1, 1)
-    h, w = SnakeCurses.GetWindowSize()
-    game = SnakeGame.SnakeGame(w, h, 1, 1)
+    #game = game.Game(WIN_WIDTH, WIN_HEIGHT, 1, 1)
+    h, w = display.GetWindowSize()
+    game = game.Game(w, h, 1, 1)
 
-    SnakeCurses.ShowGame(game)
+    display.ShowGame(game)
 

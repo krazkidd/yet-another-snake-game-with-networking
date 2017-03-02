@@ -1,3 +1,4 @@
+#!/usr/bin/python2
 # -*- coding: utf-8 -*-
 
 # *************************************************************************
@@ -18,20 +19,15 @@
 #
 #  You should have received a copy of the GNU General Public License
 #  along with Snake-M.  If not, see <http://www.gnu.org/licenses/>.
-#  
+#
 # *************************************************************************
 
-import datetime
-import sys
+import imp
 
-PRINT_DEBUG = True
-PRINT_ERROR = True
+if __name__ == '__main__':
+    # run set_path() from other script without .py extension
+    imp.load_source('snakes_module', './snakes').set_path()
 
-def print_debug(name, msg):
-    if PRINT_DEBUG:
-        print 'DEBUG (' + datetime.datetime.now().strftime("%H:%M:%S") + ') ' + str(name) + ': ' + str(msg)
+    from snakem.role import client
 
-def print_err(name, msg):
-    if PRINT_ERROR:
-        print 'ERROR (' + datetime.datetime.now().strftime("%H:%M:%S") + ') ' + str(name) + ' (line ' + str(sys.exc_info()[-1].tb_lineno) + '): ' + str(msg)
-
+    client.start()

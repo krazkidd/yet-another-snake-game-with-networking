@@ -18,7 +18,7 @@
 #
 #  You should have received a copy of the GNU General Public License
 #  along with Snake-M.  If not, see <http://www.gnu.org/licenses/>.
-#  
+#
 # *************************************************************************
 
 import os
@@ -26,17 +26,17 @@ import select
 import sys
 import time
 
-import SnakeGame
-import SnakeNet
-from SnakeConfig import *
-from SnakeDebug import *
-from SnakeEnums import *
+from snakem.game import game
+from snakem.net import net
+from snakem.config import *
+from snakem.test.debug import *
+from snakem.enums import *
 
 class LobbyServer:
     def __init__(self, lobbyNum):
         # unique server ID #
         self.lobbyNum = lobbyNum
-        self.connectPort = SnakeNet.InitServerSocket()
+        self.connectPort = net.InitServerSocket()
 
         self.serverState = None
 
@@ -58,9 +58,9 @@ class LobbyServer:
 
         try:
             while True:
-                readable, writable, exceptional = select.select([SnakeNet.sock], [], [], self.sockTimeout)
+                readable, writable, exceptional = select.select([net.sock], [], [], self.sockTimeout)
 
-                if SnakeNet.sock in readable:
+                if net.sock in readable:
                     self.handleNetMessage()
 
                 if self.serverState == GameState.GAME:
@@ -71,15 +71,15 @@ class LobbyServer:
         except BaseException as e:
             print_err('LobbyServer', str(self.lobbyNum) + ': ' + str(e))
         finally:
-            SnakeNet.CloseSocket()
+            net.CloseSocket()
 
     def handleNetMessage(self):
-        address, msgType, msgBody = SnakeNet.ReceiveMessage()
+        address, msgType, msgBody = net.ReceiveMessage()
 
         if address in self.activePlayers:
             if self.serverState == GameState.LOBBY:
                 if msgType == MsgType.LOBBY_JOIN:
-                    SnakeNet.SendLobbyJoinRequest(address) # LOBBY_JOIN is used for join confirmation
+                    net.SendLobbyJoinRequest(address) # LOBBY_JOIN is used for join confirmation
                     self.activePlayers[address] = (MsgType.NOT_READY, None) # reset READY status
                 elif msgType == MsgType.LOBBY_QUIT:
                     del self.activePlayers[address]
@@ -96,11 +96,11 @@ class LobbyServer:
         else: # address not in self.activePlayers
             if self.serverState == GameState.LOBBY:
                 if msgType == MsgType.LOBBY_JOIN:
-                    if len(self.activePlayers) < SnakeGame.MAX_PLAYERS:
-                        SnakeNet.SendLobbyJoinRequest(address) # LOBBY_JOIN is used for join confirmation
+                    if len(self.activePlayers) < MAX_PLAYERS:
+                        net.SendLobbyJoinRequest(address) # LOBBY_JOIN is used for join confirmation
                         self.activePlayers[address] = (MsgType.NOT_READY, None)
                     else:
-                        SnakeNet.SendQuitMessage(address) # LOBBY_QUIT is used for join rejection
+                        net.SendQuitMessage(address) # LOBBY_QUIT is used for join rejection
 
     def startLobbyMode(self):
         self.serverState = GameState.LOBBY
@@ -110,7 +110,7 @@ class LobbyServer:
         self.serverState = GameState.GAME
         self.sockTimeout = 0.005
 
-        self.game = SnakeGame.SnakeGame(WIN_WIDTH, WIN_HEIGHT, len(self.activePlayers))
+        self.game = game.Game(WIN_WIDTH, WIN_HEIGHT, len(self.activePlayers))
 
         #TODO start sending game setup messages
 
@@ -127,20 +127,20 @@ class MainServer:
                 sys.exit(0)
             lobbies.append(lobby)
 
-        SnakeNet.InitServerSocket(SERVER_PORT)
+        net.InitServerSocket(SERVER_PORT)
 
         print 'Main server has started on port ' + str(SERVER_PORT) + '. Waiting for clients...'
 
         try:
             while True:
-                address, msgType, msgBody = SnakeNet.ReceiveMessage()
+                address, msgType, msgBody = net.ReceiveMessage()
 
                 if msgType == MsgType.HELLO:
-                    SnakeNet.SendMOTD(address)
+                    net.SendMOTD(address)
                 elif msgType == MsgType.LOBBY_REQ:
-                    SnakeNet.SendLobbyList(address, lobbies)
+                    net.SendLobbyList(address, lobbies)
         except BaseException as e:
             print_err('MainServer', str(e))
         finally:
-            SnakeNet.CloseSocket()
+            net.CloseSocket()
 

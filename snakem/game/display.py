@@ -18,13 +18,13 @@
 #
 #  You should have received a copy of the GNU General Public License
 #  along with Snake-M.  If not, see <http://www.gnu.org/licenses/>.
-#  
+#
 # *************************************************************************
 
 import curses
 import os
 
-from SnakeDebug import *
+from snakem.test.debug import *
 
 stdscr = None
 

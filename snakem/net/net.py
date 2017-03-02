@@ -18,7 +18,7 @@
 #
 #  You should have received a copy of the GNU General Public License
 #  along with Snake-M.  If not, see <http://www.gnu.org/licenses/>.
-#  
+#
 # *************************************************************************
 
 import socket
@@ -28,9 +28,8 @@ from struct import pack
 from struct import unpack
 from struct import calcsize
 
-from SnakeConfig import *
-from SnakeDebug import *
-from SnakeEnums import *
+from snakem.config import *
+from snakem.enums import *
 
 MAX_MSG_SIZE = 1024
 

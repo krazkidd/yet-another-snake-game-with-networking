@@ -1,8 +1,16 @@
+# backup files
+*.bak
+
 # compiled Python files
 *.pyc
+bin/.c
+bin/snakesc
 
 # third-party libs
 pygcurse.py
 
 # Mark's personal TODOs
 TODO*
+
+# Vim swap files
+*.sw?
