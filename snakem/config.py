@@ -44,6 +44,9 @@ KEYS_MV_RIGHT = (ord('L'), ord('l',), curses.KEY_RIGHT)
 
 ################ SERVER CONFIG VARS ################
 
+# the address the server binds to (can be hostname or
+# IP address, but it must be a string)
+SERVER_HOST = 'localhost'
 # the port the server binds to
 SERVER_PORT = 11845
 

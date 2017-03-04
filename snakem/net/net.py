@@ -38,7 +38,7 @@ sock = None
 def InitServerSocket(port=0):
     global sock
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind(('localhost', port))
+    sock.bind((SERVER_HOST, port))
 
     return sock.getsockname()[1] # return port
 
