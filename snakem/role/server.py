@@ -22,7 +22,6 @@
 # *************************************************************************
 
 import os
-import select
 import sys
 import time
 
@@ -47,21 +46,18 @@ class LobbyServer:
 
         self.game = None
 
-        self.sockTimeout = None
+        self.sockTimeout = 0.0
 
     def start(self):
         print 'Lobby server ' + str(self.lobbyNum) + ' has started on port ' + str(self.connectPort) + '. Waiting for clients...'
 
         self.startLobbyMode()
 
-        tickTime = 0
+        tickTime = 0.0
 
         try:
             while True:
-                readable, writable, exceptional = select.select([net.sock], [], [], self.sockTimeout)
-
-                if net.sock in readable:
-                    self.handleNetMessage()
+                net.WaitForInput(self.handleNetMessage, timeout=self.sockTimeout)
 
                 if self.serverState == GameState.GAME:
                     tickTime += self.sockTimeout
@@ -104,7 +100,7 @@ class LobbyServer:
 
     def startLobbyMode(self):
         self.serverState = GameState.LOBBY
-        self.sockTimeout = None
+        self.sockTimeout = 0.0
 
     def startGameMode(self):
         self.serverState = GameState.GAME

@@ -23,7 +23,7 @@
 
 import socket
 import sys
-from select import select
+import select
 from struct import pack
 from struct import unpack
 from struct import calcsize
@@ -49,6 +49,14 @@ def InitClientSocket():
 def CloseSocket():
     if sock:
         sock.close()
+
+def WaitForInput(netCallback, keyboardCallback=None, timeout=0.0):
+    readable, writable, exceptional = select.select([sock, sys.stdin], [], [], timeout)
+
+    if not keyboardCallback is None and sys.stdin in readable:
+        keyboardCallback()
+    elif not netCallback is None and sock in readable:
+        netCallback()
 
 def SendMessage(address, msgType, msgBody=None):
     buf = None

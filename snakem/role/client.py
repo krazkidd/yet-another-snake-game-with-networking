@@ -21,7 +21,6 @@
 #
 # *************************************************************************
 
-import select
 import sys
 
 import curses.ascii
@@ -47,7 +46,7 @@ clientState = None
 game = None
 
 # how long to wait for input when a game is running #
-sockTimeout = None
+sockTimeout = 0.0
 
 def start():
     net.InitClientSocket()
@@ -56,17 +55,11 @@ def start():
 def startWithCurses():
     startMOTDMode()
 
-    tickTime = 0
+    tickTime = 0.0
 
     try:
         while True:
-            readable, writable, exceptional = select.select([net.sock, sys.stdin], [], [], sockTimeout)
-
-            if net.sock in readable:
-                handleNetMessage()
-
-            if sys.stdin in readable:
-                handleInput()
+            net.WaitForInput(handleNetMessage, handleInput, sockTimeout)
 
             if clientState == GameState.GAME:
                 tickTime += sockTimeout
@@ -158,7 +151,7 @@ def startMOTDMode():
 def startLobbyMode():
     global clientState, sockTimeout
     clientState = GameState.LOBBY
-    sockTimeout = None
+    sockTimeout = 0.0
 
     display.ShowLobby()
 
