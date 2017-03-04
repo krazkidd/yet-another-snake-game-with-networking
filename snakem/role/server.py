@@ -81,8 +81,8 @@ class LobbyServer(MainServer):
         self.sockTimeout = 0.0
 
     def start(self):
-        print 'Lobby server ' + str(self.lobbyNum) + ' has started on port ' + str(
-            self.connectPort) + '. Waiting for clients...'
+        print 'Lobby server ' + str(self.lobbyNum) + ' has started on port ' \
+            + str(self.connectPort) + '. Waiting for clients...'
 
         self.startLobbyMode()
 

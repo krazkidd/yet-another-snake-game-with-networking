@@ -118,4 +118,3 @@ def SendSetupMessage(address):
 
 def SendStartMessage(address):
     SendMessage(address, MsgType.START)
-

@@ -120,7 +120,7 @@ def handleInput():
         elif c in KEYS_LOBBY_READY:
             net.SendReadyMessage(lobbyAddr)
     elif clientState == GameState.GAME:
-        if c == KEYS_GAME_QUIT:
+        if c in KEYS_GAME_QUIT:
             #TODO make it harder to quit running game
             net.SendQuitMessage(lobbyAddr)
             startMOTDMode()
@@ -164,4 +164,3 @@ def startGameMode():
     game = game.Game(w, h, 1, 1)
 
     display.ShowGame(game)
-
