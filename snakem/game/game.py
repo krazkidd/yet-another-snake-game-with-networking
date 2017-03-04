@@ -21,28 +21,23 @@
 #
 # *************************************************************************
 
-import select
-import sys
-
 from snakem.game.pellet import Pellet
 from snakem.game.snake import Snake
 from snakem.game.snake import SnakeAI
 from snakem.enums import *
+
+MAX_PLAYERS = 4
 
 class Game:
     def __init__(self, width, height, numHumans=1, numAI=0):
         self.width = width
         self.height = height
 
-        #TODO add pellet after snakes and make sure pellet doesn't appear
-        #     on top of a snake...
-        self.pellet = Pellet(1, 1, width - 1 - 1, height - 1 - 1)
-
         startPos = [
-            (width/4, height/4),
-            (width - width/4, height/4),
-            (width - width/4, height - height/4),
-            (width/4, height - height/4)
+            (width / 4, height / 4),
+            (width - width / 4, height / 4),
+            (width - width / 4, height - height / 4),
+            (width / 4, height - height / 4)
             ]
         startDir = [Dir.Right, Dir.Left, Dir.Left, Dir.Right]
 
@@ -75,6 +70,8 @@ class Game:
             self.snakes.append(SnakeAI(startPos[count][0], startPos[count][1], startDir[count]))
             count += 1
 
+        self.SpawnNewPellet()
+
         self.tickNum = 0
 
     def tick(self):
@@ -97,3 +94,15 @@ class Game:
 
         self.tickNum += 1
 
+    def SpawnNewPellet(self):
+        self.pellet = Pellet(1, 1, self.width - 1 - 1, self.height - 1 - 1)
+
+        # make sure pellet doesn't appear on top of a snake...
+        isGoodPos = False
+        while not isGoodPos:
+            for snake in self.snakes:
+                if snake.isInBody(self.pellet.pos):
+                    self.pellet.RandomizePosition()
+                    break
+            else:
+                isGoodPos = True

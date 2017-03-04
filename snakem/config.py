@@ -67,6 +67,3 @@ WIN_WIDTH, WIN_HEIGHT = 60, 35
 
 # how often to advance the game state #
 STEP_TIME = 0.1
-
-MAX_PLAYERS = 4
-

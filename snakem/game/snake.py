@@ -151,6 +151,9 @@ class Snake:
 
         return False
 
+    def isInBody(self, pos):
+        return pos in self.body
+
 class SnakeAI(Snake):
 
     """This is the computer's avatar in the game.
