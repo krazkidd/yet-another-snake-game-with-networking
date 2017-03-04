@@ -14,3 +14,6 @@ TODO*
 
 # Vim swap files
 *.sw?
+
+# PyCharm IDE files
+.idea
