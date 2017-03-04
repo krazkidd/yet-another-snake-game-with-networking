@@ -72,10 +72,8 @@ def startWithCurses():
             net.SendQuitMessage(lobbyAddr)
         net.CloseSocket()
 
-def handleNetMessage():
+def handleNetMessage(address, msgType, msgBody):
     global motd, lobbyList
-
-    address, msgType, msgBody = net.ReceiveMessage()
 
     if address == lobbyAddr:
         if clientState == GameState.MOTD:
