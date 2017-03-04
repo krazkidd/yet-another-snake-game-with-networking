@@ -53,9 +53,9 @@ def CloseSocket():
 def WaitForInput(netCallback, keyboardCallback=None, timeout=0.0):
     readable, writable, exceptional = select.select([sock, sys.stdin], [], [], timeout)
 
-    if not keyboardCallback is None and sys.stdin in readable:
+    if keyboardCallback is not None and sys.stdin in readable:
         keyboardCallback()
-    elif not netCallback is None and sock in readable:
+    elif netCallback is not None and sock in readable:
         address, msgType, msgBody = ReceiveMessage()
         netCallback(address, msgType, msgBody)
 
