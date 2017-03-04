@@ -6,6 +6,7 @@ name, so for the purposes of copyright and what-not, I'll just call it
 Snake-M (M for Multiplayer).
 
 Author: Mark Ross
+
 Contact: krazkidd@gmail.com
 
 Project hosted at:
