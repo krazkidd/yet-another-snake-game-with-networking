@@ -24,6 +24,9 @@
 import curses
 import os
 
+from snakem.game.snake import Snake
+from snakem.game.pellet import Pellet
+
 from snakem.test.debug import *
 
 stdscr = None
@@ -90,9 +93,14 @@ def ShowGame(game):
     for snake in game.snakes:
         if len(debugStr) > 0:
             debugStr += ', '
-        for pos in snake.body:
-            if pos[0] >= 0 and pos[0] <= w - 1 and pos[1] >= 0 and pos[1] <= h - 1:
-                stdscr.addch(pos[1], pos[0], ord('O'))
+
+        for x, y in snake.body:
+            if 0 <= x <= w - 1 and 0 <= y <= h - 1:
+                if (x, y) == snake.body[0]:
+                    stdscr.addch(y, x, ord('X'))
+                else:
+                    stdscr.addch(y, x, ord('O'))
+
         debugStr += 'snake: ' + str(len(snake.body))
 
     stdscr.addch(game.pellet.pos[1], game.pellet.pos[0], ord('+'))
@@ -134,7 +142,7 @@ def GetWindowSize():
     h, w = stdscr.getmaxyx()
     if PRINT_DEBUG:
         h -= 1
-    return (h, w)
+    return h, w
 
 def GetKey():
     return stdscr.getch()

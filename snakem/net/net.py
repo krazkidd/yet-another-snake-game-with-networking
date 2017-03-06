@@ -28,10 +28,15 @@ from struct import pack
 from struct import unpack
 from struct import calcsize
 
+from snakem.game.snake import Snake
+from snakem.game.pellet import Pellet
 from snakem.config import *
 from snakem.enums import *
 
 MAX_MSG_SIZE = 1024
+
+# how long to wait for an input event
+TIMEOUT = 0.005
 
 sock = None
 
@@ -50,8 +55,12 @@ def CloseSocket():
     if sock:
         sock.close()
 
-def WaitForInput(netCallback, keyboardCallback=None, timeout=0.0):
-    readable, writable, exceptional = select.select([sock, sys.stdin], [], [], timeout)
+def WaitForInput(netCallback, keyboardCallback=None, doBlock=True):
+    if doBlock:
+        # we block on this call so we're not wasting cycles outside of an active game
+        readable, writable, exceptional = select.select([sock, sys.stdin], [], [])
+    else:
+        readable, writable, exceptional = select.select([sock, sys.stdin], [], [], TIMEOUT)
 
     if keyboardCallback is not None and sys.stdin in readable:
         keyboardCallback()
@@ -60,7 +69,6 @@ def WaitForInput(netCallback, keyboardCallback=None, timeout=0.0):
         netCallback(address, msgType, msgBody)
 
 def SendMessage(address, msgType, msgBody=None):
-    buf = None
     if msgBody:
         buf = pack(MsgFmt.HDR, msgType, calcsize(MsgFmt.HDR) + len(msgBody))
         buf += msgBody
@@ -102,10 +110,30 @@ def UnpackLobbyList(msgBody):
     packedLobbies = msgBody[calcsize(MsgFmt.LBY_CNT):]
 
     lobbyList = []
+    size = calcsize(MsgFmt.LBY)
     for i in range(lobbyCount):
-        lobbyList.append(unpack(MsgFmt.LBY, packedLobbies[i * calcsize(MsgFmt.LBY):i * calcsize(MsgFmt.LBY) + calcsize(MsgFmt.LBY)]))
+        lobbyList.append(unpack(MsgFmt.LBY, packedLobbies[i * size:(i + 1) * size]))
 
     return lobbyList
+
+def SendSnakeUpdate(address, tick, id, snake):
+    #TODO don't exceed MAX_MSG_SIZE (without breaking the game--allow splitting an update or increase MAX_MSG_SIZE)
+    buf = pack(MsgFmt.SNAKE_UPDATE_HDR, tick, id, snake.heading, snake.isAlive, len(snake.body))
+    for pos in snake.body:
+        buf += pack(MsgFmt.SNAKE_UPDATE_BDY, pos[0], pos[y])
+
+    SendMessage(address, MsgType.SNAKE_UPDATE, buf)
+
+def UnpackSnakeUpdate(msgBody):
+    tick, id, heading, isAlive, length = unpack(MsgFmt.SNAKE_UPDATE_HDR, msgBody[:calcsize(MsgFmt.SNAKE_UPDATE_HDR)])
+    bodyBuf = msgBody[calcsize(MsgFmt.SNAKE_UPDATE_HDR):]
+
+    body = list()
+    size = calcsize(MsgFmt.SNAKE_UPDATE_BDY)
+    for i in range(length):
+        body.append((unpack(MsgFmt.SNAKE_UPDATE_BDY, bodyBuf[i * size:(i + 1) * size])))
+
+    return tick, id, heading, isAlive, body
 
 def SendLobbyJoinRequest(address):
     SendMessage(address, MsgType.LOBBY_JOIN)

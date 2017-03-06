@@ -42,11 +42,19 @@ class MsgFmt:
     # H: port number
     LBY = '!BH'
 
-    # game update message
-    # I: tick num of update (game time elapsed)
-    # B: new heading of player's snake
-    GAME_UPDATE = '!IB'
+    # snake update message (header)
+    # I: tick num (game time elapsed)
+    # i: snake ID
+    # B: heading
+    # ?: is alive
+    # I: body length
+    SNAKE_UPDATE_HDR = '!IiB?I'
+
+    # snake update message (snake body)
+    # i: x position
+    # i: y position
+    SNAKE_UPDATE_BDY = '!ii'
 
 class MsgType:
     """Enum for Snake network messages"""
-    NONE, HELLO, MOTD, LOBBY_REQ, LOBBY_REP, LOBBY_JOIN, LOBBY_QUIT, READY, NOT_READY, START, UPDATE, CHAT, SETUP = range(13)
+    NONE, HELLO, MOTD, LOBBY_REQ, LOBBY_REP, LOBBY_JOIN, LOBBY_QUIT, READY, NOT_READY, START, SNAKE_UPDATE, CHAT, SETUP = range(13)

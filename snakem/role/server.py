@@ -78,11 +78,9 @@ class LobbyServer(MainServer):
 
         self.game = None
 
-        self.sockTimeout = 0.0
-
     def start(self):
         print 'Lobby server ' + str(self.lobbyNum) + ' has started on port ' \
-            + str(self.connectPort) + '. Waiting for clients...'
+           + str(self.connectPort) + '. Waiting for clients...'
 
         self.startLobbyMode()
 
@@ -90,7 +88,7 @@ class LobbyServer(MainServer):
 
         try:
             while True:
-                net.WaitForInput(self.handleNetMessage, timeout=self.sockTimeout)
+                net.WaitForInput(self.handleNetMessage, not self.serverState == GameState.GAME)
 
                 if self.serverState == GameState.GAME:
                     tickTime += self.sockTimeout
@@ -131,11 +129,9 @@ class LobbyServer(MainServer):
 
     def startLobbyMode(self):
         self.serverState = GameState.LOBBY
-        self.sockTimeout = 0.0
 
     def startGameMode(self):
         self.serverState = GameState.GAME
-        self.sockTimeout = 0.005
 
         self.game = game.Game(WIN_WIDTH, WIN_HEIGHT, len(self.activePlayers))
 

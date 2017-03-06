@@ -23,76 +23,60 @@
 
 from snakem.game.pellet import Pellet
 from snakem.game.snake import Snake
-from snakem.game.snake import SnakeAI
 from snakem.enums import *
 
-MAX_PLAYERS = 4
-
 class Game:
-    def __init__(self, width, height, numHumans=1, numAI=0):
+    def __init__(self, width, height):
         self.width = width
         self.height = height
 
-        startPos = [
-            (width / 4, height / 4),
-            (width - width / 4, height / 4),
-            (width - width / 4, height - height / 4),
-            (width / 4, height - height / 4)
-            ]
-        startDir = [Dir.Right, Dir.Left, Dir.Left, Dir.Right]
-
-        count = 0
-
-        self.snakes = list()
-        if numHumans >= 1:
-            self.snakes.append(Snake(startPos[count][0], startPos[count][1], startDir[count]))
-            count += 1
-        if numHumans >= 2:
-            self.snakes.append(Snake(startPos[count][0], startPos[count][1], startDir[count]))
-            count += 1
-        if numHumans >= 3:
-            self.snakes.append(Snake(startPos[count][0], startPos[count][1], startDir[count]))
-            count += 1
-        if numHumans >= 4:
-            self.snakes.append(Snake(startPos[count][0], startPos[count][1], startDir[count]))
-            count += 1
-
-        if numAI >= 1 and numHumans + 1 <= MAX_PLAYERS:
-            self.snakes.append(SnakeAI(startPos[count][0], startPos[count][1], startDir[count]))
-            count += 1
-        if numAI >= 2 and numHumans + 2 <= MAX_PLAYERS:
-            self.snakes.append(SnakeAI(startPos[count][0], startPos[count][1], startDir[count]))
-            count += 1
-        if numAI >= 3 and numHumans + 3 <= MAX_PLAYERS:
-            self.snakes.append(SnakeAI(startPos[count][0], startPos[count][1], startDir[count]))
-            count += 1
-        if numAI >= 4 and numHumans + 4 <= MAX_PLAYERS:
-            self.snakes.append(SnakeAI(startPos[count][0], startPos[count][1], startDir[count]))
-            count += 1
-
-        self.SpawnNewPellet()
+        self.snakes = dict()
+        self.pellet = None
 
         self.tickNum = 0
 
     def tick(self):
+        # move all snakes before checking collisions
         for snake in self.snakes:
             snake.move(self.pellet)
 
-        # check if colliding with self or any other snakes
         for snake in self.snakes:
+            # check with other snakes
             for otherSnake in self.snakes:
-                if snake.isColl(otherSnake):
-                    #TODO kill snake
-                    pass
+                if snake is not otherSnake and snake.body[0] in otherSnake.body:
+                    snake.isAlive = False
 
-        if snake.headPos[0] in (0, self.width - 1) or snake.headPos[1] in (0, self.height - 1):
-            #TODO kill snake
-            pass
-        elif snake.headPos == self.pellet.pos:
-            self.pellet.RandomizePosition()
-            snake.grow()
+            x, y = snake.body[0]
+            # check boundaries
+            if x in (0, self.width - 1) or y in (0, self.height - 1):
+                snake.isAlive = False
+            # check pellet
+            elif snake.headPos == self.pellet.pos:
+                snake.grow()
+                self.SpawnNewPellet()
 
         self.tickNum += 1
+
+    def SpawnNewSnake(self, id=None):
+        # NOTE: Only 4 snakes are supported.
+
+        if id is None:
+            id = len(self.snakes)
+
+            if not id < 4:
+                return None
+
+        startPos = [
+            (self.width / 4, self.height / 4),
+            (self.width - self.width / 4, self.height / 4),
+            (self.width - self.width / 4, self.height - self.height / 4),
+            (self.width / 4, self.height - self.height / 4)
+        ]
+        startDir = [Dir.Right, Dir.Left, Dir.Left, Dir.Right]
+
+        self.snakes[id] = Snake(startPos[id], startDir[id])
+
+        return id
 
     def SpawnNewPellet(self):
         self.pellet = Pellet(1, 1, self.width - 1 - 1, self.height - 1 - 1)
@@ -101,8 +85,18 @@ class Game:
         isGoodPos = False
         while not isGoodPos:
             for snake in self.snakes:
-                if snake.isInBody(self.pellet.pos):
+                if self.pellet.pos in snake.body:
                     self.pellet.RandomizePosition()
                     break
             else:
                 isGoodPos = True
+
+    def UpdateSnake(self, id, heading, isAlive, body):
+        if id not in self.snakes:
+            # just add the snake, I guess?
+            self.SpawnNewSnake(id)
+
+        s = self.snakes[id]
+        s.heading = heading
+        s.isAlive = isAlive
+        s.body = body

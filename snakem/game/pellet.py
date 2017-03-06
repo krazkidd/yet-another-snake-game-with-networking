@@ -39,6 +39,7 @@ class Pellet:
         self.__maxX = maxX
         self.__maxY = maxY
 
+        self.pos = (minX, minY)
         self.RandomizePosition()
 
     def RandomizePosition(self):

@@ -37,15 +37,15 @@ mainSrvAddr = (HOST, SERVER_PORT)
 motd = None
 lobbyList = None
 
-# the lobby server address #
+# the lobby server address
 lobbyAddr = None
 
 clientState = None 
 
-# the running game instance #
+# the running game instance
 game = None
 
-# how long to wait for input when a game is running #
+# how long to wait for input
 sockTimeout = 0.0
 
 def start():
@@ -86,8 +86,7 @@ def handleNetMessage(address, msgType, msgBody):
             if msgType == MsgType.START:
                 startGameMode()
         elif clientState == GameState.GAME:
-            #TODO pass message to game
-            pass
+            handleNetMessageDuringGame(msgType, msgBody)
     elif address == mainSrvAddr:
         if clientState == GameState.MOTD:
             if msgType == MsgType.MOTD:
@@ -96,6 +95,10 @@ def handleNetMessage(address, msgType, msgBody):
             elif msgType == MsgType.LOBBY_REP:
                 lobbyList = net.UnpackLobbyList(msgBody)
                 display.ShowMOTD(address, motd, lobbyList)
+
+def handleNetMessageDuringGame(msgType, msgBody):
+    if msgType == MsgType.SETUP:
+        game.UpdateSnake(net.UnpackSnakeUpdate(msgBody))
 
 def handleInput():
     global lobbyAddr
@@ -107,7 +110,7 @@ def handleInput():
             sys.exit()
         elif curses.ascii.isdigit(c):
             selection = int(curses.ascii.unctrl(c))
-            if selection >= 1 and selection <= len(lobbyList):
+            if 1 <= selection <= len(lobbyList):
                 lobbyAddr = (mainSrvAddr[0], lobbyList[selection - 1][1])
                 net.SendLobbyJoinRequest(lobbyAddr)
         elif c in KEYS_LOBBY_REFRESH:
@@ -125,13 +128,17 @@ def handleInput():
             net.SendQuitMessage(lobbyAddr)
             startMOTDMode()
         elif c in KEYS_MV_LEFT:
-            game.snakes[0].changeHeading(Dir.Left)
+            #TODO send input to server
+            pass
         elif c in KEYS_MV_DOWN:
-            game.snakes[0].changeHeading(Dir.Down)
+            # TODO send input to server
+            pass
         elif c in KEYS_MV_UP:
-            game.snakes[0].changeHeading(Dir.Up)
+            # TODO send input to server
+            pass
         elif c in KEYS_MV_RIGHT:
-            game.snakes[0].changeHeading(Dir.Right)
+            # TODO send input to server
+            pass
     elif clientState == GameState.GAME_OVER:
         if c in KEYS_LOBBY_QUIT:
             startLobbyMode()
@@ -158,9 +165,9 @@ def startGameMode():
     clientState = GameState.GAME
     sockTimeout = 0.005
 
-    #TODO get win width/height from server
-    #game = game.Game(WIN_WIDTH, WIN_HEIGHT, 1, 1)
+    #TODO get win width/height from server (and/or change display code to handle large maps)
+    #game = game.Game(WIN_WIDTH, WIN_HEIGHT)
     h, w = display.GetWindowSize()
-    game = game.Game(w, h, 1, 1)
+    game = game.Game(w, h)
 
     display.ShowGame(game)
