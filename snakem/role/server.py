@@ -91,7 +91,7 @@ class LobbyServer(MainServer):
                 net.WaitForInput(self.handleNetMessage, not self.serverState == GameState.GAME)
 
                 if self.serverState == GameState.GAME:
-                    tickTime += self.sockTimeout
+                    tickTime += net.TIMEOUT
                     if tickTime >= STEP_TIME:
                         tickTime -= STEP_TIME
                         self.game.tick()
@@ -121,7 +121,7 @@ class LobbyServer(MainServer):
         else:  # address not in self.activePlayers
             if self.serverState == GameState.LOBBY:
                 if msgType == MsgType.LOBBY_JOIN:
-                    if len(self.activePlayers) < MAX_PLAYERS:
+                    if len(self.activePlayers) < 4:
                         net.SendLobbyJoinRequest(address)  # LOBBY_JOIN is used for join confirmation
                         self.activePlayers[address] = (MsgType.NOT_READY, None)
                     else:

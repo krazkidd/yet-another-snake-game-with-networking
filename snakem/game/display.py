@@ -24,9 +24,6 @@
 import curses
 import os
 
-from snakem.game.snake import Snake
-from snakem.game.pellet import Pellet
-
 from snakem.test.debug import *
 
 stdscr = None

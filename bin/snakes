@@ -27,7 +27,7 @@ import os
 import os.path
 
 def set_path():
-    """Add snakem package to sys.path the gpodder way.
+    """Add snakem package to sys.path the gPodder way.
 
     Source: https://stackoverflow.com/q/3281495
     """

@@ -28,8 +28,6 @@ from struct import pack
 from struct import unpack
 from struct import calcsize
 
-from snakem.game.snake import Snake
-from snakem.game.pellet import Pellet
 from snakem.config import *
 from snakem.enums import *
 
@@ -120,7 +118,7 @@ def SendSnakeUpdate(address, tick, id, snake):
     #TODO don't exceed MAX_MSG_SIZE (without breaking the game--allow splitting an update or increase MAX_MSG_SIZE)
     buf = pack(MsgFmt.SNAKE_UPDATE_HDR, tick, id, snake.heading, snake.isAlive, len(snake.body))
     for pos in snake.body:
-        buf += pack(MsgFmt.SNAKE_UPDATE_BDY, pos[0], pos[y])
+        buf += pack(MsgFmt.SNAKE_UPDATE_BDY, pos[0], pos[1])
 
     SendMessage(address, MsgType.SNAKE_UPDATE, buf)
 
