@@ -55,6 +55,11 @@ class MsgFmt:
     # i: y position
     SNAKE_UPDATE_BDY = '!ii'
 
+    # client/player input
+    # B: new heading
+    PLAYER_INPUT = '!B'
+
 class MsgType:
     """Enum for Snake network messages"""
-    NONE, HELLO, MOTD, LOBBY_REQ, LOBBY_REP, LOBBY_JOIN, LOBBY_QUIT, READY, NOT_READY, START, SNAKE_UPDATE, CHAT, SETUP = range(13)
+    NONE, HELLO, MOTD, LOBBY_REQ, LOBBY_REP, LOBBY_JOIN, LOBBY_QUIT, \
+       READY, NOT_READY, START, END, SNAKE_UPDATE, CHAT, SETUP, INPUT = range(15)

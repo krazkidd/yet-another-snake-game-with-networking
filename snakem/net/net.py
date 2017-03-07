@@ -144,3 +144,12 @@ def SendSetupMessage(address):
 
 def SendStartMessage(address):
     SendMessage(address, MsgType.START)
+
+def SendEndMessage(address):
+    SendMessage(address, MsgType.END)
+
+def SendInputMessage(address, heading):
+    SendMessage(address, MsgType.INPUT, pack(MsgFmt.PLAYER_INPUT, heading))
+
+def UnpackInputMessage(msgBody):
+    return unpack(MsgType.INPUT, msgBody)

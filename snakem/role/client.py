@@ -42,11 +42,7 @@ lobbyAddr = None
 
 clientState = None 
 
-# the running game instance
-game = None
-
-# how long to wait for input
-sockTimeout = 0.0
+gameInstance = None
 
 def start():
     net.InitClientSocket()
@@ -59,14 +55,13 @@ def startWithCurses():
 
     try:
         while True:
-            net.WaitForInput(handleNetMessage, handleInput, sockTimeout)
+            net.WaitForInput(handleNetMessage, handleInput, not clientState == GameState.GAME)
 
             if clientState == GameState.GAME:
-                tickTime += sockTimeout
+                tickTime += net.TIMEOUT
                 if tickTime >= STEP_TIME:
                     tickTime -= STEP_TIME
-                    game.tick()
-                    display.ShowGame(game)
+                    display.ShowGame(gameInstance)
     finally:
         if lobbyAddr:
             net.SendQuitMessage(lobbyAddr)
@@ -97,8 +92,11 @@ def handleNetMessage(address, msgType, msgBody):
                 display.ShowMOTD(address, motd, lobbyList)
 
 def handleNetMessageDuringGame(msgType, msgBody):
-    if msgType == MsgType.SETUP:
-        game.UpdateSnake(net.UnpackSnakeUpdate(msgBody))
+    if msgType == MsgType.SNAKE_UPDATE:
+        gameInstance.UpdateSnake(net.UnpackSnakeUpdate(msgBody))
+    elif msgType == MsgType.END:
+        endGameMode()
+        startLobbyMode()
 
 def handleInput():
     global lobbyAddr
@@ -128,17 +126,13 @@ def handleInput():
             net.SendQuitMessage(lobbyAddr)
             startMOTDMode()
         elif c in KEYS_MV_LEFT:
-            #TODO send input to server
-            pass
+            net.SendInputMessage(lobbyAddr, Dir.Left)
         elif c in KEYS_MV_DOWN:
-            # TODO send input to server
-            pass
+            net.SendInputMessage(lobbyAddr, Dir.Down)
         elif c in KEYS_MV_UP:
-            # TODO send input to server
-            pass
+            net.SendInputMessage(lobbyAddr, Dir.Up)
         elif c in KEYS_MV_RIGHT:
-            # TODO send input to server
-            pass
+            net.SendInputMessage(lobbyAddr, Dir.Right)
     elif clientState == GameState.GAME_OVER:
         if c in KEYS_LOBBY_QUIT:
             startLobbyMode()
@@ -154,20 +148,23 @@ def startMOTDMode():
     display.ShowMessage('Contacting server at ' + mainSrvAddr[0] + ':' + str(mainSrvAddr[1]) + ' . . .')
 
 def startLobbyMode():
-    global clientState, sockTimeout
+    global clientState
     clientState = GameState.LOBBY
-    sockTimeout = 0.0
 
     display.ShowLobby()
 
 def startGameMode():
-    global clientState, sockTimeout, game
+    global clientState, gameInstance
     clientState = GameState.GAME
-    sockTimeout = 0.005
 
     #TODO get win width/height from server (and/or change display code to handle large maps)
-    #game = game.Game(WIN_WIDTH, WIN_HEIGHT)
+    #gameInstance = game.Game(WIN_WIDTH, WIN_HEIGHT)
     h, w = display.GetWindowSize()
-    game = game.Game(w, h)
+    gameInstance = game.Game(w, h)
 
-    display.ShowGame(game)
+    display.ShowGame(gameInstance)
+
+def endGameMode():
+    global gameInstance
+
+    gameInstance = None

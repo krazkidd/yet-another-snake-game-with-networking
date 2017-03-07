@@ -71,9 +71,9 @@ class LobbyServer(MainServer):
 
         self.serverState = None
 
-        # activePlayers maps net addresses to tuples of (X, Y) where:
-        #   X: ready status (MsgType.{NOT_,}READY)
-        #   Y: Snake object when a game is running
+        # activePlayers maps net addresses to tuples of (r, s) where:
+        #   r = ready status (MsgType.{NOT_,}READY)
+        #   s = snake id when a game is running
         self.activePlayers = dict()
 
         self.game = None
@@ -88,13 +88,20 @@ class LobbyServer(MainServer):
 
         try:
             while True:
-                net.WaitForInput(self.handleNetMessage, not self.serverState == GameState.GAME)
+                net.WaitForInput(self.handleNetMessage, doBlock=not self.serverState == GameState.GAME)
 
                 if self.serverState == GameState.GAME:
                     tickTime += net.TIMEOUT
                     if tickTime >= STEP_TIME:
                         tickTime -= STEP_TIME
                         self.game.tick()
+
+                        for s in self.game.snakes.itervalues():
+                            if s.isAlive:
+                                break
+                        else:
+                            self.endGameMode()
+                            self.startLobbyMode()
         except BaseException as e:
             print_err('LobbyServer', str(self.lobbyNum) + ': ' + str(e))
         finally:
@@ -102,22 +109,26 @@ class LobbyServer(MainServer):
 
     def handleNetMessage(self, address, msgType, msgBody):
         if address in self.activePlayers:
-            if self.serverState == GameState.LOBBY:
+            if self.serverState == GameState.GAME:
+                self.handleNetMessageDuringGame(address, msgType, msgBody)
+            elif self.serverState == GameState.LOBBY:
+                status, id = self.activePlayers[address]
+
                 if msgType == MsgType.LOBBY_JOIN:
                     net.SendLobbyJoinRequest(address)  # LOBBY_JOIN is used for join confirmation
-                    self.activePlayers[address] = (MsgType.NOT_READY, None)  # reset READY status
+                    self.activePlayers[address] = (MsgType.NOT_READY, id)  # reset READY status
                 elif msgType == MsgType.LOBBY_QUIT:
                     del self.activePlayers[address]
                 elif msgType == MsgType.READY:
-                    self.activePlayers[address] = (MsgType.READY, None)
-                    allReady = True
+                    self.activePlayers[address] = (MsgType.READY, id)
+
                     for addr, playerTuple in self.activePlayers.iteritems():
-                        allReady = allReady and playerTuple[0] == MsgType.READY
-                    if allReady:
+                        if not playerTuple[0] == MsgType.READY:
+                            break
+                    else:
                         self.startGameMode()
-            elif self.serverState == GameState.GAME:
-                # TODO pass message to game
-                pass
+                elif msgType == MsgType.NOT_READY:
+                    self.activePlayers[address] = (MsgType.NOT_READY, id)
         else:  # address not in self.activePlayers
             if self.serverState == GameState.LOBBY:
                 if msgType == MsgType.LOBBY_JOIN:
@@ -127,12 +138,40 @@ class LobbyServer(MainServer):
                     else:
                         net.SendQuitMessage(address)  # LOBBY_QUIT is used for join rejection
 
+    def handleNetMessageDuringGame(self, address, msgType, msgBody):
+        doUpdateClients = False
+
+        if msgType == MsgType.INPUT:
+            self.game.snakes[self.activePlayers[address][1]].changeHeading(net.UnpackInputMessage(msgBody))
+            doUpdateClients = True
+
+        if doUpdateClients:
+            for addr in self.activePlayers:
+                for id, s in self.game.snakes.iteritems():
+                    net.SendSnakeUpdate(addr, self.game.tickNum, id, s)
+
     def startLobbyMode(self):
         self.serverState = GameState.LOBBY
 
     def startGameMode(self):
         self.serverState = GameState.GAME
 
-        self.game = game.Game(WIN_WIDTH, WIN_HEIGHT, len(self.activePlayers))
+        self.game = game.Game(WIN_WIDTH, WIN_HEIGHT)
 
-        # TODO start sending game setup messages
+        for addr, playerTuple in self.activePlayers.iteritems():
+            self.activePlayers[addr] = (playerTuple[0], self.game.SpawnNewSnake())
+
+        self.game.SpawnNewPellet()
+
+        for addr in self.activePlayers:
+            for id, s in self.game.snakes.iteritems():
+                net.SendSnakeUpdate(addr, self.game.tickNum, id, s)
+
+        for addr in self.activePlayers:
+            net.SendStartMessage(addr)
+
+    def endGameMode(self):
+        for addr in self.activePlayers:
+            net.SendEndMessage(addr)
+
+        self.game = None

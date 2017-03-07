@@ -37,12 +37,12 @@ class Game:
 
     def tick(self):
         # move all snakes before checking collisions
-        for snake in self.snakes:
-            snake.move(self.pellet)
+        for snake in self.snakes.itervalues():
+            snake.move()
 
-        for snake in self.snakes:
+        for snake in self.snakes.itervalues():
             # check with other snakes
-            for otherSnake in self.snakes:
+            for otherSnake in self.snakes.itervalues():
                 if snake is not otherSnake and snake.body[0] in otherSnake.body:
                     snake.isAlive = False
 
@@ -51,7 +51,7 @@ class Game:
             if x in (0, self.width - 1) or y in (0, self.height - 1):
                 snake.isAlive = False
             # check pellet
-            elif snake.headPos == self.pellet.pos:
+            elif snake.body[0] == self.pellet.pos:
                 snake.grow()
                 self.SpawnNewPellet()
 
@@ -84,7 +84,7 @@ class Game:
         # make sure pellet doesn't appear on top of a snake...
         isGoodPos = False
         while not isGoodPos:
-            for snake in self.snakes:
+            for snake in self.snakes.itervalues():
                 if self.pellet.pos in snake.body:
                     self.pellet.RandomizePosition()
                     break
