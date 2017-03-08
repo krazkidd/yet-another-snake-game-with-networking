@@ -24,7 +24,7 @@
 import curses
 import os
 
-from snakem.test.debug import *
+from snakem.test import debug
 
 stdscr = None
 
@@ -111,7 +111,7 @@ def ShowGame(game):
 def ShowDebug(msg=None):
     global _lastDebugMessage
 
-    if PRINT_DEBUG:
+    if debug.doPrintDebug:
         h, w = stdscr.getmaxyx()
         if msg and len(msg) > 0:
             msg += ' '
@@ -125,7 +125,7 @@ def ShowDebug(msg=None):
 def ShowDebugInGame(msg=None):
     global _lastDebugMessage
 
-    if PRINT_DEBUG:
+    if debug.doPrintDebug:
         h, w = stdscr.getmaxyx()
         if msg and len(msg) > 0:
             msg = ' ' + msg + ' '
@@ -138,7 +138,7 @@ def ShowDebugInGame(msg=None):
 
 def GetWindowSize():
     h, w = stdscr.getmaxyx()
-    if PRINT_DEBUG:
+    if debug.doPrintDebug:
         h -= 1
     return h, w
 

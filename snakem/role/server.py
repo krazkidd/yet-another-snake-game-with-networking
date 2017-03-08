@@ -23,12 +23,12 @@
 
 import os
 import sys
-import time
+
+import snakem.config.server as cfg
 
 from snakem.game import game
 from snakem.net import net
-from snakem.config import *
-from snakem.test.debug import *
+from snakem.test import debug
 from snakem.enums import *
 
 class MainServer:
@@ -36,8 +36,10 @@ class MainServer:
         self.lobbies = []
 
     def start(self):
+        debug.init_debug('MainServer', cfg.PRINT_DEBUG, cfg.PRINT_ERROR, cfg.PRINT_NETMSG)
+
         # start lobbies as separate processes
-        for i in range(1, NUM_LOBBIES + 1):
+        for i in range(1, cfg.NUM_LOBBIES + 1):
             lobby = LobbyServer(i)
             pid = os.fork()
             if pid == 0:
@@ -45,21 +47,21 @@ class MainServer:
                 sys.exit(0)
             self.lobbies.append(lobby)
 
-        net.InitServerSocket(SERVER_PORT)
+        net.InitServerSocket(cfg.BIND_ADDR)
 
-        print 'Main server has started on port ' + str(SERVER_PORT) + '. Waiting for clients...'
+        print 'Main server has started on port ' + str(cfg.BIND_ADDR[1]) + '. Waiting for clients...'
 
         try:
             while True:
                 net.WaitForInput(self.handleNetMessage)
         except BaseException as e:
-            print_err('MainServer', str(e))
+            debug.print_err(str(e))
         finally:
             net.CloseSocket()
 
     def handleNetMessage(self, address, msgType, msgBody):
         if msgType == MsgType.HELLO:
-            net.SendMOTD(address)
+            net.SendMOTD(address, cfg.MOTD)
         elif msgType == MsgType.LOBBY_REQ:
             net.SendLobbyList(address, self.lobbies)
 
@@ -67,7 +69,7 @@ class LobbyServer(MainServer):
     def __init__(self, lobbyNum):
         # unique server ID #
         self.lobbyNum = lobbyNum
-        self.connectPort = net.InitServerSocket()
+        self.connectPort = net.InitServerSocket((cfg.BIND_ADDR[0], 0)) # port = 0 will use random port
 
         self.serverState = None
 
@@ -79,6 +81,8 @@ class LobbyServer(MainServer):
         self.game = None
 
     def start(self):
+        debug.init_debug('LobbyServer', cfg.PRINT_DEBUG, cfg.PRINT_ERROR, cfg.PRINT_NETMSG)
+
         print 'Lobby server ' + str(self.lobbyNum) + ' has started on port ' \
            + str(self.connectPort) + '. Waiting for clients...'
 
@@ -92,8 +96,8 @@ class LobbyServer(MainServer):
 
                 if self.serverState == GameState.GAME:
                     tickTime += net.TIMEOUT
-                    if tickTime >= STEP_TIME:
-                        tickTime -= STEP_TIME
+                    if tickTime >= cfg.STEP_TIME:
+                        tickTime -= cfg.STEP_TIME
                         self.game.tick()
 
                         for s in self.game.snakes.itervalues():
@@ -103,7 +107,7 @@ class LobbyServer(MainServer):
                             self.endGameMode()
                             self.startLobbyMode()
         except BaseException as e:
-            print_err('LobbyServer', str(self.lobbyNum) + ': ' + str(e))
+            debug.print_err(str(self.lobbyNum) + ': ' + str(e))
         finally:
             net.CloseSocket()
 
@@ -156,7 +160,7 @@ class LobbyServer(MainServer):
     def startGameMode(self):
         self.serverState = GameState.GAME
 
-        self.game = game.Game(WIN_WIDTH, WIN_HEIGHT)
+        self.game = game.Game(cfg.WIN_WIDTH, cfg.WIN_HEIGHT)
 
         for addr, playerTuple in self.activePlayers.iteritems():
             self.activePlayers[addr] = (playerTuple[0], self.game.SpawnNewSnake())

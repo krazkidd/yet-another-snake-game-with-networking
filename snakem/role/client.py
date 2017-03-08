@@ -25,15 +25,14 @@ import sys
 
 import curses.ascii
 
+import snakem.config.client as cfg
+
 from snakem.game import display
 from snakem.game import game
 from snakem.net import net
-
-from snakem.config import *
-from snakem.test.debug import *
+from snakem.test import debug
 from snakem.enums import *
 
-mainSrvAddr = (HOST, SERVER_PORT)
 motd = None
 lobbyList = None
 
@@ -45,6 +44,8 @@ clientState = None
 gameInstance = None
 
 def start():
+    debug.init_debug('Client', cfg.PRINT_DEBUG, cfg.PRINT_ERROR, cfg.PRINT_NETMSG)
+
     net.InitClientSocket()
     display.InitClientWindow(startWithCurses)
 
@@ -59,8 +60,9 @@ def startWithCurses():
 
             if clientState == GameState.GAME:
                 tickTime += net.TIMEOUT
-                if tickTime >= STEP_TIME:
-                    tickTime -= STEP_TIME
+                # TODO get STEP_TIME from server during game setup
+                if tickTime >= cfg.STEP_TIME:
+                    tickTime -= cfg.STEP_TIME
                     display.ShowGame(gameInstance)
     finally:
         if lobbyAddr:
@@ -82,7 +84,8 @@ def handleNetMessage(address, msgType, msgBody):
                 startGameMode()
         elif clientState == GameState.GAME:
             handleNetMessageDuringGame(msgType, msgBody)
-    elif address == mainSrvAddr:
+    #TODO if cfg.SERVER_ADDR[0] is a hostname, convert it to IP address
+    elif address == cfg.SERVER_ADDR:
         if clientState == GameState.MOTD:
             if msgType == MsgType.MOTD:
                 motd = msgBody
@@ -104,37 +107,37 @@ def handleInput():
     c = display.GetKey()
 
     if clientState == GameState.MOTD:
-        if c in KEYS_LOBBY_QUIT:
+        if c in cfg.KEYS_LOBBY_QUIT:
             sys.exit()
         elif curses.ascii.isdigit(c):
             selection = int(curses.ascii.unctrl(c))
             if 1 <= selection <= len(lobbyList):
-                lobbyAddr = (mainSrvAddr[0], lobbyList[selection - 1][1])
+                lobbyAddr = (cfg.SERVER_ADDR[0], lobbyList[selection - 1][1])
                 net.SendLobbyJoinRequest(lobbyAddr)
-        elif c in KEYS_LOBBY_REFRESH:
-            net.SendHelloMessage(mainSrvAddr)
-            net.SendLobbyListRequest(mainSrvAddr)
+        elif c in cfg.KEYS_LOBBY_REFRESH:
+            net.SendHelloMessage(cfg.SERVER_ADDR)
+            net.SendLobbyListRequest(cfg.SERVER_ADDR)
     elif clientState == GameState.LOBBY:
-        if c in KEYS_LOBBY_QUIT:
+        if c in cfg.KEYS_LOBBY_QUIT:
             net.SendQuitMessage(lobbyAddr)
             startMOTDMode()
-        elif c in KEYS_LOBBY_READY:
+        elif c in cfg.KEYS_LOBBY_READY:
             net.SendReadyMessage(lobbyAddr)
     elif clientState == GameState.GAME:
-        if c in KEYS_GAME_QUIT:
+        if c in cfg.KEYS_GAME_QUIT:
             #TODO make it harder to quit running game
             net.SendQuitMessage(lobbyAddr)
             startMOTDMode()
-        elif c in KEYS_MV_LEFT:
+        elif c in cfg.KEYS_MV_LEFT:
             net.SendInputMessage(lobbyAddr, Dir.Left)
-        elif c in KEYS_MV_DOWN:
+        elif c in cfg.KEYS_MV_DOWN:
             net.SendInputMessage(lobbyAddr, Dir.Down)
-        elif c in KEYS_MV_UP:
+        elif c in cfg.KEYS_MV_UP:
             net.SendInputMessage(lobbyAddr, Dir.Up)
-        elif c in KEYS_MV_RIGHT:
+        elif c in cfg.KEYS_MV_RIGHT:
             net.SendInputMessage(lobbyAddr, Dir.Right)
     elif clientState == GameState.GAME_OVER:
-        if c in KEYS_LOBBY_QUIT:
+        if c in cfg.KEYS_LOBBY_QUIT:
             startLobbyMode()
 
 def startMOTDMode():
@@ -142,10 +145,10 @@ def startMOTDMode():
     clientState  = GameState.MOTD
     lobbyAddr = None
 
-    net.SendHelloMessage(mainSrvAddr)
-    net.SendLobbyListRequest(mainSrvAddr)
+    net.SendHelloMessage(cfg.SERVER_ADDR)
+    net.SendLobbyListRequest(cfg.SERVER_ADDR)
 
-    display.ShowMessage('Contacting server at ' + mainSrvAddr[0] + ':' + str(mainSrvAddr[1]) + ' . . .')
+    display.ShowMessage('Contacting server at ' + cfg.SERVER_ADDR[0] + ':' + str(cfg.SERVER_ADDR[1]) + ' . . .')
 
 def startLobbyMode():
     global clientState

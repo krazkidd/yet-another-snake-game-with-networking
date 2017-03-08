@@ -24,14 +24,43 @@
 import datetime
 import sys
 
-PRINT_DEBUG = True
-PRINT_ERROR = True
+from snakem.enums import MsgType
 
-def print_debug(name, msg):
-    if PRINT_DEBUG:
-        print 'DEBUG (' + datetime.datetime.now().strftime("%H:%M:%S") + ') ' + str(name) + ': ' + str(msg)
+name = 'None'
 
-def print_err(name, msg):
-    if PRINT_ERROR:
-        print 'ERROR (' + datetime.datetime.now().strftime("%H:%M:%S") + ') ' + str(name) + ' (line ' + str(sys.exc_info()[-1].tb_lineno) + '): ' + str(msg)
+doPrintDebug = False
+doPrintError = False
+doPrintNetMsg = False
 
+netMsgNames = dict([(MsgType.NONE, "None"), (MsgType.HELLO, "Hello"), (MsgType.MOTD, "MOTD"), (MsgType.LOBBY_REQ, "Lobby request"),
+                    (MsgType.LOBBY_REP, "Lobby reply"), (MsgType.LOBBY_JOIN, "Lobby join"), (MsgType.LOBBY_QUIT, "Lobby quit"), (MsgType.READY, "Ready"),
+                    (MsgType.NOT_READY, "Not ready"), (MsgType.START, "Start"), (MsgType.END, "End"), (MsgType.SNAKE_UPDATE, "Snake update"),
+                    (MsgType.SETUP, "Setup"), (MsgType.INPUT, "Input")])
+
+def init_debug(nm, debug, error, netMsg):
+    global name, doPrintDebug, doPrintError, doPrintNetMsg
+
+    name = str(nm)
+    doPrintDebug = debug
+    doPrintError = error
+    doPrintNetMsg = netMsg
+
+def print_debug(msg):
+    if doPrintDebug:
+        print 'DEBUG (' + datetime.datetime.now().strftime("%H:%M:%S") + ') ' + name + ': ' + str(msg)
+
+def print_err(msg):
+    if doPrintError:
+        print 'ERROR (' + datetime.datetime.now().strftime("%H:%M:%S") + ') ' + name + ' (line ' + str(sys.exc_info()[-1].tb_lineno) + '): ' + str(msg)
+
+def print_net_msg(address, msgType, msgBody):
+    if doPrintNetMsg:
+        if msgType in netMsgNames:
+            msgTypeStr = netMsgNames[msgType]
+        else:
+            msgTypeStr = 'Unknown type'
+
+        if msgBody:
+            print 'NETMSG (' + address[0] + ') ' + name + ': <' + msgTypeStr + '> Body length: ' + str(len(msgBody))
+        else:
+            print 'NETMSG (' + address[0] + ') ' + name + ': <' + msgTypeStr + '>'

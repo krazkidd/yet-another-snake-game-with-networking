@@ -28,7 +28,7 @@ from struct import pack
 from struct import unpack
 from struct import calcsize
 
-from snakem.config import *
+from snakem.test import debug
 from snakem.enums import *
 
 MAX_MSG_SIZE = 1024
@@ -38,10 +38,10 @@ TIMEOUT = 0.005
 
 sock = None
 
-def InitServerSocket(port=0):
+def InitServerSocket(addr):
     global sock
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind((SERVER_HOST, port))
+    sock.bind(addr)
 
     return sock.getsockname()[1] # return port
 
@@ -78,17 +78,22 @@ def SendMessage(address, msgType, msgBody=None):
 def ReceiveMessage():
     msg, address = sock.recvfrom(MAX_MSG_SIZE)
     msgType, msgLen = unpack(MsgFmt.HDR, msg[:calcsize(MsgFmt.HDR)])
+
     #TODO verify msg size!
     if len(msg) > calcsize(MsgFmt.HDR):
-        return address, msgType, msg[calcsize(MsgFmt.HDR):]
+        msgBody = msg[calcsize(MsgFmt.HDR):]
     else:
-        return address, msgType, None
+        msgBody = None
+
+    debug.print_net_msg(address, msgType, msgBody)
+
+    return address, msgType, msgBody
 
 def SendHelloMessage(address):
     SendMessage(address, MsgType.HELLO)
 
-def SendMOTD(address):
-    SendMessage(address, MsgType.MOTD, MOTD)
+def SendMOTD(address, motd):
+    SendMessage(address, MsgType.MOTD, motd)
 
 def SendQuitMessage(address):
     SendMessage(address, MsgType.LOBBY_QUIT)
