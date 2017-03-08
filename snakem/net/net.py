@@ -134,7 +134,7 @@ def UnpackSnakeUpdate(msgBody):
     body = list()
     size = calcsize(MsgFmt.SNAKE_UPDATE_BDY)
     for i in range(length):
-        body.append((unpack(MsgFmt.SNAKE_UPDATE_BDY, bodyBuf[i * size:(i + 1) * size])))
+        body.append(unpack(MsgFmt.SNAKE_UPDATE_BDY, bodyBuf[i * size:(i + 1) * size]))
 
     return tick, id, heading, isAlive, body
 
@@ -157,4 +157,4 @@ def SendInputMessage(address, heading):
     SendMessage(address, MsgType.INPUT, pack(MsgFmt.PLAYER_INPUT, heading))
 
 def UnpackInputMessage(msgBody):
-    return unpack(MsgType.INPUT, msgBody)
+    return int(unpack(MsgFmt.PLAYER_INPUT, msgBody)[0])

@@ -100,6 +100,10 @@ class LobbyServer(MainServer):
                         tickTime -= cfg.STEP_TIME
                         self.game.tick()
 
+                        for addr in self.activePlayers:
+                            for id, s in self.game.snakes.iteritems():
+                                net.SendSnakeUpdate(addr, self.game.tickNum, id, s)
+
                         for s in self.game.snakes.itervalues():
                             if s.isAlive:
                                 break

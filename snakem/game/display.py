@@ -87,7 +87,7 @@ def ShowGame(game):
 
     debugStr = ''
     h, w = stdscr.getmaxyx()
-    for snake in game.snakes:
+    for id, snake in game.snakes.iteritems():
         if len(debugStr) > 0:
             debugStr += ', '
 

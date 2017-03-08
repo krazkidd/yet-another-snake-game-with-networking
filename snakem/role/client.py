@@ -84,7 +84,7 @@ def handleNetMessage(address, msgType, msgBody):
                 startGameMode()
         elif clientState == GameState.GAME:
             handleNetMessageDuringGame(msgType, msgBody)
-    #TODO if cfg.SERVER_ADDR[0] is a hostname, convert it to IP address
+    #TODO if cfg.SERVER_ADDR[0] is a hostname, convert it to IP address. Because this might not match
     elif address == cfg.SERVER_ADDR:
         if clientState == GameState.MOTD:
             if msgType == MsgType.MOTD:
@@ -96,7 +96,9 @@ def handleNetMessage(address, msgType, msgBody):
 
 def handleNetMessageDuringGame(msgType, msgBody):
     if msgType == MsgType.SNAKE_UPDATE:
-        gameInstance.UpdateSnake(net.UnpackSnakeUpdate(msgBody))
+        tick, id, heading, isAlive, body = net.UnpackSnakeUpdate(msgBody)
+
+        gameInstance.UpdateSnake(id, heading, isAlive, body)
     elif msgType == MsgType.END:
         endGameMode()
         startLobbyMode()
