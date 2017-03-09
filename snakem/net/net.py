@@ -73,6 +73,8 @@ def SendMessage(address, msgType, msgBody=None):
     else:
         buf = pack(MsgFmt.HDR, msgType, calcsize(MsgFmt.HDR))
 
+    debug.print_net_msg_sent(address, msgType, msgBody)
+
     sock.sendto(buf, address)
 
 def ReceiveMessage():
@@ -85,7 +87,7 @@ def ReceiveMessage():
     else:
         msgBody = None
 
-    debug.print_net_msg(address, msgType, msgBody)
+    debug.print_net_msg_received(address, msgType, msgBody)
 
     return address, msgType, msgBody
 

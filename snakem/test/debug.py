@@ -53,7 +53,7 @@ def print_err(msg):
     if doPrintError:
         print 'ERROR (' + datetime.datetime.now().strftime("%H:%M:%S") + ') ' + name + ' (line ' + str(sys.exc_info()[-1].tb_lineno) + '): ' + str(msg)
 
-def print_net_msg(address, msgType, msgBody):
+def print_net_msg(address, msgType, msgBody, toOrFromStr):
     if doPrintNetMsg:
         if msgType in netMsgNames:
             msgTypeStr = netMsgNames[msgType]
@@ -61,6 +61,12 @@ def print_net_msg(address, msgType, msgBody):
             msgTypeStr = 'Unknown type'
 
         if msgBody:
-            print 'NETMSG (' + address[0] + ') ' + name + ': <' + msgTypeStr + '> Body length: ' + str(len(msgBody))
+            print 'NETMSG (' + toOrFromStr + ' ' + address[0] + ') ' + name + ': <' + msgTypeStr + '> Body length: ' + str(len(msgBody))
         else:
-            print 'NETMSG (' + address[0] + ') ' + name + ': <' + msgTypeStr + '>'
+            print 'NETMSG (' + toOrFromStr + ' ' + address[0] + ') ' + name + ': <' + msgTypeStr + '>'
+
+def print_net_msg_sent(address, msgType, msgBody):
+    print_net_msg(address, msgType, msgBody, 'to')
+
+def print_net_msg_received(address, msgType, msgBody):
+    print_net_msg(address, msgType, msgBody, 'from')
