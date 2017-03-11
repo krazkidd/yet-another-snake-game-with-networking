@@ -102,8 +102,11 @@ class LobbyServer(MainServer):
 
                         for addr in self.activePlayers:
                             for id, s in self.game.snakes.iteritems():
+                                debug.print_debug('(' + str(s.body[0][0]) + ', ' + str(s.body[0][1]) + ')')
                                 net.SendSnakeUpdate(addr, self.game.tickNum, id, s)
 
+                        # end game when all snakes are dead
+                        #TODO the game should end when at most *one* snake is alive
                         for s in self.game.snakes.itervalues():
                             if s.isAlive:
                                 break

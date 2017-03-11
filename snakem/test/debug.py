@@ -32,11 +32,6 @@ doPrintDebug = False
 doPrintError = False
 doPrintNetMsg = False
 
-netMsgNames = dict([(MsgType.NONE, "None"), (MsgType.HELLO, "Hello"), (MsgType.MOTD, "MOTD"), (MsgType.LOBBY_REQ, "Lobby request"),
-                    (MsgType.LOBBY_REP, "Lobby reply"), (MsgType.LOBBY_JOIN, "Lobby join"), (MsgType.LOBBY_QUIT, "Lobby quit"), (MsgType.READY, "Ready"),
-                    (MsgType.NOT_READY, "Not ready"), (MsgType.START, "Start"), (MsgType.END, "End"), (MsgType.SNAKE_UPDATE, "Snake update"),
-                    (MsgType.SETUP, "Setup"), (MsgType.INPUT, "Input")])
-
 def init_debug(nm, debug, error, netMsg):
     global name, doPrintDebug, doPrintError, doPrintNetMsg
 
@@ -53,20 +48,24 @@ def print_err(msg):
     if doPrintError:
         print 'ERROR (' + datetime.datetime.now().strftime("%H:%M:%S") + ') ' + name + ' (line ' + str(sys.exc_info()[-1].tb_lineno) + '): ' + str(msg)
 
-def print_net_msg(address, msgType, msgBody, toOrFromStr):
+def get_net_msg(address, toOrFromStr, msgType, msgBody, addlInfo):
+    if msgBody:
+        bodyLength = str(len(msgBody))
+    else:
+        bodyLength = '0'
+
+    #TODO find out if addlInfo, as a reference, is being changed after function returns
+    if addlInfo and  len(addlInfo) > 0:
+        addlInfo = ' ' + addlInfo
+    else:
+        addlInfo = ''
+
+    return 'NETMSG (' + toOrFromStr + ' ' + address[0] + ') ' + name + ': <' + msgType.__class__.__name__ + ', length ' + bodyLength + '>' + addlInfo
+
+def print_net_msg_sent(address, msgType, msgBody=None, addlInfo=None):
     if doPrintNetMsg:
-        if msgType in netMsgNames:
-            msgTypeStr = netMsgNames[msgType]
-        else:
-            msgTypeStr = 'Unknown type'
+        print get_net_msg(address, 'to', msgType, msgBody, addlInfo)
 
-        if msgBody:
-            print 'NETMSG (' + toOrFromStr + ' ' + address[0] + ') ' + name + ': <' + msgTypeStr + '> Body length: ' + str(len(msgBody))
-        else:
-            print 'NETMSG (' + toOrFromStr + ' ' + address[0] + ') ' + name + ': <' + msgTypeStr + '>'
-
-def print_net_msg_sent(address, msgType, msgBody):
-    print_net_msg(address, msgType, msgBody, 'to')
-
-def print_net_msg_received(address, msgType, msgBody):
-    print_net_msg(address, msgType, msgBody, 'from')
+def print_net_msg_received(address, msgType, msgBody=None, addlInfo=None):
+    if doPrintNetMsg:
+        print get_net_msg(address, 'from', msgType, msgBody, addlInfo)

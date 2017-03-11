@@ -72,6 +72,8 @@ def startWithCurses():
 def handleNetMessage(address, msgType, msgBody):
     global motd, lobbyList
 
+    display.ShowDebug(debug.get_net_msg(address, 'from', msgType, msgBody, net.GetAddlInfoForDebug(msgType, msgBody)))
+
     if address == lobbyAddr:
         if clientState == GameState.MOTD:
             if msgType == MsgType.LOBBY_JOIN:
@@ -98,7 +100,7 @@ def handleNetMessageDuringGame(msgType, msgBody):
     if msgType == MsgType.SNAKE_UPDATE:
         tick, id, heading, isAlive, body = net.UnpackSnakeUpdate(msgBody)
 
-        gameInstance.UpdateSnake(id, heading, isAlive, body)
+        gameInstance.UpdateSnake(tick, id, heading, isAlive, body)
     elif msgType == MsgType.END:
         endGameMode()
         startLobbyMode()

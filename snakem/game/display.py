@@ -104,7 +104,8 @@ def ShowGame(game):
         stdscr.addch(game.pellet.pos[1], game.pellet.pos[0], ord('+'))
 
     #TODO name the snakes and show score at the top?
-    ShowDebugInGame(debugStr)
+    #ShowDebugInGame(debugStr)
+    ShowDebugInGame()
 
     stdscr.refresh()
 

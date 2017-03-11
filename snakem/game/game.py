@@ -91,7 +91,7 @@ class Game:
             else:
                 isGoodPos = True
 
-    def UpdateSnake(self, id, heading, isAlive, body):
+    def UpdateSnake(self, tick, id, heading, isAlive, body):
         if id not in self.snakes:
             # just add the snake, I guess?
             self.SpawnNewSnake(id)
@@ -100,3 +100,7 @@ class Game:
         s.heading = heading
         s.isAlive = isAlive
         s.body = body
+
+    def UpdatePellet(self, pos):
+        #TODO
+        pass

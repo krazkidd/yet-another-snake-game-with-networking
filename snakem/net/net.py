@@ -73,7 +73,7 @@ def SendMessage(address, msgType, msgBody=None):
     else:
         buf = pack(MsgFmt.HDR, msgType, calcsize(MsgFmt.HDR))
 
-    debug.print_net_msg_sent(address, msgType, msgBody)
+    debug.print_net_msg_sent(address, msgType, msgBody, GetAddlInfoForDebug(msgType, msgBody))
 
     sock.sendto(buf, address)
 
@@ -87,9 +87,17 @@ def ReceiveMessage():
     else:
         msgBody = None
 
-    debug.print_net_msg_received(address, msgType, msgBody)
+    debug.print_net_msg_received(address, msgType, msgBody, GetAddlInfoForDebug(msgType, msgBody))
 
     return address, msgType, msgBody
+
+def GetAddlInfoForDebug(msgType, msgBody):
+    if msgType == MsgType.SNAKE_UPDATE:
+        tick, id, heading, isAlive, body = UnpackSnakeUpdate(msgBody)
+        x, y = body[0]
+        return '(' + str(x) + ', ' + str(y) + ')'
+
+    return None
 
 def SendHelloMessage(address):
     SendMessage(address, MsgType.HELLO)
