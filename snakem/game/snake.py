@@ -81,13 +81,13 @@ class Snake:
             # check the heading of the snake and move the
             # head's position accordingly
             if self.heading == Dir.Right:
-                self.body.append((x + 1, y))
+                self.body.appendleft((x + 1, y))
             elif self.heading == Dir.Left:
-                self.body.append((x - 1, y))
+                self.body.appendleft((x - 1, y))
             elif self.heading == Dir.Up:
-                self.body.append((x, y - 1))
+                self.body.appendleft((x, y - 1))
             elif self.heading == Dir.Down:
-                self.body.append((x, y + 1))
+                self.body.appendleft((x, y + 1))
 
             # pop the last body segment unless the snake is supposed to grow
             if self.__shouldGrow:
