@@ -48,7 +48,7 @@ def print_err(msg):
     if doPrintError:
         print 'ERROR (' + datetime.datetime.now().strftime("%H:%M:%S") + ') ' + name + ' (line ' + str(sys.exc_info()[-1].tb_lineno) + '): ' + str(msg)
 
-def get_net_msg(address, toOrFromStr, msgType, msgBody, addlInfo):
+def get_net_msg(address, toOrFromStr, msgType, msgBody=None, addlInfo=None):
     if msgBody:
         bodyLength = str(len(msgBody))
     else:
@@ -60,7 +60,7 @@ def get_net_msg(address, toOrFromStr, msgType, msgBody, addlInfo):
     else:
         addlInfo = ''
 
-    return 'NETMSG (' + toOrFromStr + ' ' + address[0] + ') ' + name + ': <' + msgType.__class__.__name__ + ', length ' + bodyLength + '>' + addlInfo
+    return 'NETMSG (' + toOrFromStr + ' ' + address[0] + ') ' + name + ': <' + MsgType.GetName(msgType) + ', length ' + bodyLength + '>' + addlInfo
 
 def print_net_msg_sent(address, msgType, msgBody=None, addlInfo=None):
     if doPrintNetMsg:
