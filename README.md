@@ -10,16 +10,16 @@ Author: Mark Ross
 Contact: krazkidd@gmail.com
 
 Project hosted at:
-  https://github.com/krazkidd/yet-another-snake-game-with-networking
+  https://github.com/krazkidd/snakem
 
 License: GPLv3 (see COPYING file)
 
 ### Features:
 * Multiple lobbies per server
-* Bots
+* ...
 
 ### Requires:
-* Unix (due to some nuances of Python's os module)
+* *nix OS (because of os.fork() and curses)
 * Python 2.7
 
 ### Starting the game:
